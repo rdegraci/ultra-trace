@@ -1,0 +1,75 @@
+# Ultra-Trace user defaults (tunable knobs).
+# Copied to the user app directory on first run if missing:
+#   ~/Library/Application Support/ultra-trace/config.yaml
+#
+# Precedence (highest → lowest):
+#   1. CLI flags
+#   2. Project config (--config / repo ultra-trace.yml)
+#   3. This user config (~/Library/Application Support/ultra-trace/config.yaml)
+#   4. Built-in defaults
+#
+# Secrets do NOT go here. Use ~/Library/Application Support/ultra-trace/.env (from dot_env.example).
+
+# Path exploration
+maxDepth: 12
+
+# Repository discovery (project config usually overrides these)
+includePaths: []
+excludePaths:
+  - .git
+  - DerivedData
+  - .build
+  - Pods
+  - Carthage
+  - SourcePackages
+
+focusModules: []
+
+# Analysis modes: core always; advanced when SIL/Xcode deepening is available
+analysisModes:
+  - core
+
+# Reporting
+severityThreshold: medium
+proofMode: mixed
+outputFormats:
+  - markdown
+  - json
+
+# Privacy / LLM assist (keys in ~/Library/Application Support/ultra-trace/.env)
+# Recommended nightly default: offline + llm.enabled false
+privacyMode: offline
+llm:
+  enabled: false
+  provider: openai
+  model: ""
+  baseURL: ""
+  apiKeyEnvVar: ULTRA_TRACE_LLM_API_KEY
+  timeoutSeconds: 60
+  allowedFeatures:
+    - exploration_planning
+    - remediation_wording
+    - reproduction_drafting
+    - report_summary
+    - proof_prose_polishing
+
+# Shallow taint (override per project as needed)
+sourcePatterns: []
+sinkPatterns: []
+
+# Swift Core frontend
+swiftFrontend:
+  helperPath: null
+  parserVersion: null
+  toolchainPath: null
+  supportedSubsetMode: core
+
+# Advanced / SIL (final shape; ignored safely in MVP)
+advanced:
+  enabled: false
+  silToolchainPath: null
+
+# Call-summary budget (foundation in MVP; descent later)
+callSummary:
+  enabled: false
+  maxDepth: 0

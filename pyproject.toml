@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ultra-trace"
+version = "0.1.0"
+description = "Deterministic static analysis CLI for Swift (Core MVP)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Ultra-Trace" }]
+dependencies = [
+  "PyYAML>=6.0",
+  "python-dotenv>=1.0",
+  "typer>=0.12",
+  "python-ripgrep>=0.0.8; python_version < '3.13'",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "mypy>=1.8",
+  "types-PyYAML>=6.0",
+]
+
+[project.scripts]
+ultra-trace = "ultra_trace.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ultra_trace = ["data/config.yaml.example", "data/dot_env.example"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["ultra_trace"]
+mypy_path = "src"

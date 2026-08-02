@@ -1,0 +1,17 @@
+# Ultra-Trace LLM credentials and provider defaults.
+# Copied to the user app directory as .env on first run if missing:
+#   ~/Library/Application Support/ultra-trace/.env
+#
+# Do not commit real keys. Do not put API keys in ultra-trace.yml.
+
+# Required when LLM assist is enabled (privacy mode not offline)
+ULTRA_TRACE_LLM_API_KEY=
+
+# Optional provider defaults (CLI / ultra-trace.yml can override)
+ULTRA_TRACE_LLM_PROVIDER=openai
+ULTRA_TRACE_LLM_MODEL=
+ULTRA_TRACE_LLM_BASE_URL=
+
+# Optional: Anthropic-style key name alias if you prefer provider-native names
+# ANTHROPIC_API_KEY=
+# OPENAI_API_KEY=
