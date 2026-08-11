@@ -1,0 +1,25 @@
+{
+  "corpus_name": "example-uikit-app",
+  "bucket": "uikit",
+  "source_url": "https://example.com/repo",
+  "commit_sha": "REPLACE",
+  "license": "REPLACE",
+  "notes": "Fill after running scripts/run_parser_spike.py against the checkout.",
+  "spike_output_path": "docs/cache/spikes/results/uikit-example.json",
+  "summary": {
+    "file_count": null,
+    "eligibility_approx": {
+      "parsed": null,
+      "partially-analyzed": null,
+      "skipped": null
+    },
+    "call_resolution_counts": {
+      "resolved": null,
+      "unresolved": null,
+      "ambiguous": null
+    },
+    "marker_counts": {},
+    "unsupported_categories": {},
+    "duration_seconds": null
+  }
+}

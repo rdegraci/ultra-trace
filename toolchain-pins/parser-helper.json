@@ -1,0 +1,9 @@
+{
+  "helper_name": "swift-parser-helper",
+  "helper_version": "0.1.0",
+  "schema_version": "1.0",
+  "swift_syntax_version": "602.0.0",
+  "expected_swift_version_prefix": "6.2",
+  "drift_policy": "fail",
+  "notes": "macOS + Xcode assumed for Core Swift analysis. drift_policy=fail means CI validation exits non-zero when helper/schema/swift-syntax/toolchain prefix diverge from this pin."
+}

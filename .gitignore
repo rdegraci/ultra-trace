@@ -147,4 +147,8 @@ out/
 tmp/
 temp/
 
+# SwiftPM
+.swiftpm/
+swift-parser-helper/.build/
+
 docs/cache/

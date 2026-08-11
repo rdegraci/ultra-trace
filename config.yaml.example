@@ -63,6 +63,7 @@ swiftFrontend:
   parserVersion: null
   toolchainPath: null
   supportedSubsetMode: core
+  helperTimeoutSeconds: 120
 
 # Advanced / SIL (final shape; ignored safely in MVP)
 advanced:

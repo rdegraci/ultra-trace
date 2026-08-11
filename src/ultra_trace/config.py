@@ -37,6 +37,7 @@ class SwiftFrontendConfig:
     parser_version: str | None = None
     toolchain_path: str | None = None
     supported_subset_mode: str = "core"
+    helper_timeout_seconds: int = 120
 
 
 @dataclass(frozen=True)
@@ -99,6 +100,7 @@ _CAMEL_TO_SNAKE = {
     "parserVersion": "parser_version",
     "toolchainPath": "toolchain_path",
     "supportedSubsetMode": "supported_subset_mode",
+    "helperTimeoutSeconds": "helper_timeout_seconds",
     "silToolchainPath": "sil_toolchain_path",
 }
 
@@ -149,6 +151,9 @@ def _merge_swift(
         toolchain_path=overlay.get("toolchain_path", base.toolchain_path),
         supported_subset_mode=str(
             overlay.get("supported_subset_mode", base.supported_subset_mode)
+        ),
+        helper_timeout_seconds=int(
+            overlay.get("helper_timeout_seconds", base.helper_timeout_seconds)
         ),
     )
 
