@@ -37,7 +37,12 @@ outputFormats:
   - json
 
 # Privacy / LLM assist (keys in ~/Library/Application Support/ultra-trace/.env)
-# Recommended nightly default: offline + llm.enabled false
+# Recommended nightly / CI default: offline + llm.enabled false (no key required).
+# To enable assist safely:
+#   1. Keep secrets only in ~/Library/Application Support/ultra-trace/.env
+#   2. Set privacyMode to redacted (minimized prompts) or full-assist
+#   3. Set llm.enabled true, provider, and model
+#   4. LLM output is advisory only — it cannot create findings or set severity
 privacyMode: offline
 llm:
   enabled: false

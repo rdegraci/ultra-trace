@@ -23,6 +23,27 @@ User config (created on first run if missing):
 - `~/Library/Application Support/ultra-trace/config.yaml`
 - `~/Library/Application Support/ultra-trace/.env`
 
+## LLM assist (optional, Slice 7)
+
+Defaults stay **offline** with `llm.enabled: false`. No API key is required.
+
+To enable assist safely:
+
+1. Put the key only in `~/Library/Application Support/ultra-trace/.env` as `ULTRA_TRACE_LLM_API_KEY` (never in YAML).
+2. Set `privacyMode: redacted` (minimized prompts) or `full-assist` in config or `--privacy-mode`.
+3. Enable a provider: `--llm-enabled --provider openai|anthropic|openai-compatible --model MODEL`.
+4. OpenAI-compatible also needs `--base-url`.
+
+The LLM may propose an exploration plan and draft advisory wording. The runtime clamps the plan, records `resolved_plan_id`, and falls back to `default-offline` / `default-fallback` on disable or failure. Findings, severity, and proof support stay analyzer-owned.
+
+```bash
+# CI-safe (default)
+ultra-trace analyze --privacy-mode offline --no-llm
+
+# Local assist (key already in Application Support .env)
+ultra-trace analyze --privacy-mode redacted --llm-enabled --provider openai --model gpt-4.1-mini
+```
+
 ## Parser helper (Slice 2, macOS + Xcode)
 
 ```bash

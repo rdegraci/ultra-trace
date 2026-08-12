@@ -4,7 +4,8 @@
 #
 # Do not commit real keys. Do not put API keys in ultra-trace.yml.
 
-# Required when LLM assist is enabled (privacy mode not offline)
+# Required only when LLM assist is enabled and privacyMode is not offline.
+# Offline / --no-llm works with this left empty.
 ULTRA_TRACE_LLM_API_KEY=
 
 # Optional provider defaults (CLI / ultra-trace.yml can override)

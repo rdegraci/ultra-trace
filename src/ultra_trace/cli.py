@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -18,6 +19,12 @@ from ultra_trace.config import (
 )
 from ultra_trace.discovery.scanner import default_scanner
 from ultra_trace.engine.pipeline import analyze_repository
+from ultra_trace.llm import (
+    LLMConfigError,
+    apply_env_llm_overrides,
+    disable_llm_when_offline,
+    validate_llm_config,
+)
 from ultra_trace.logging_setup import setup_logging
 from ultra_trace.parser.helper import (
     HelperInvocationError,
@@ -48,6 +55,7 @@ _SEVERITIES = {"low", "medium", "high", "critical"}
 _PRIVACY = {"offline", "redacted", "full-assist"}
 _FORMATS = {"markdown", "json"}
 _MODES = {"core", "advanced"}
+_PROVIDERS = {"anthropic", "openai", "openai-compatible"}
 
 
 def _configure_logging(verbose: bool, quiet: bool) -> None:
@@ -118,12 +126,17 @@ def analyze(
         raise typer.BadParameter("--severity-threshold must be low|medium|high|critical")
     if privacy_mode is not None and privacy_mode not in _PRIVACY:
         raise typer.BadParameter("--privacy-mode must be offline|redacted|full-assist")
+    if provider is not None and provider not in _PROVIDERS:
+        raise typer.BadParameter(
+            "--provider must be anthropic|openai|openai-compatible"
+        )
     if config is not None and not config.is_file():
         typer.echo(f"configuration error: config not found: {config}", err=True)
         raise typer.Exit(code=EXIT_USAGE)
 
     try:
         cfg = load_layered_config(project_config=config, repo_root=repo_root)
+        cfg = apply_env_llm_overrides(cfg, dict(os.environ))
     except (ValueError, yaml.YAMLError) as exc:
         typer.echo(f"configuration error: {exc}", err=True)
         raise typer.Exit(code=EXIT_USAGE) from exc
@@ -155,6 +168,12 @@ def analyze(
         model=model,
         base_url=base_url,
     )
+    cfg = disable_llm_when_offline(cfg)
+    try:
+        validate_llm_config(cfg)
+    except LLMConfigError as exc:
+        typer.echo(f"configuration error: {exc}", err=True)
+        raise typer.Exit(code=EXIT_USAGE) from exc
 
     if "advanced" in cfg.analysis_modes and fail_on_advanced_unavailable:
         typer.echo(

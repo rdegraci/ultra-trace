@@ -277,7 +277,7 @@ def apply_cli_overrides(
     if base_url is not None:
         llm = replace(llm, base_url=base_url)
 
-    return replace(
+    updated = replace(
         cfg,
         max_depth=cfg.max_depth if max_depth is None else max_depth,
         focus_modules=(
@@ -297,3 +297,6 @@ def apply_cli_overrides(
         ),
         llm=llm,
     )
+    if updated.privacy_mode == "offline" and updated.llm.enabled:
+        updated = replace(updated, llm=replace(updated.llm, enabled=False))
+    return updated

@@ -8,6 +8,7 @@ from ultra_trace import __version__
 from ultra_trace.core.findings import Finding
 from ultra_trace.engine.pipeline import AnalysisResult
 from ultra_trace.frontend.models import SourceSpan
+from ultra_trace.llm.models import AdvisoryItem
 from ultra_trace.reporting.coverage import (
     call_resolution_counts,
     coverage_notes,
@@ -33,7 +34,20 @@ def location_to_json(span: SourceSpan) -> dict[str, object]:
     }
 
 
-def finding_to_json(finding: Finding) -> dict[str, object]:
+def finding_to_json(
+    finding: Finding,
+    *,
+    advisory_items: tuple[AdvisoryItem, ...] = (),
+    advisory_provider: str | None = None,
+) -> dict[str, object]:
+    if advisory_items:
+        advisory: dict[str, object] = {
+            "llm_used": True,
+            "provider": advisory_provider,
+            "content": [{"kind": item.kind, "text": item.text} for item in advisory_items],
+        }
+    else:
+        advisory = {"llm_used": False, "provider": None, "content": []}
     return {
         "id": finding.id,
         "rule_id": finding.rule_id,
@@ -73,7 +87,7 @@ def finding_to_json(finding: Finding) -> dict[str, object]:
             }
             for rec in finding.unsupported_constructs
         ],
-        "advisory": {"llm_used": False, "provider": None, "content": []},
+        "advisory": advisory,
     }
 
 
@@ -129,7 +143,38 @@ def _warnings_for(result: AnalysisResult) -> list[dict[str, object]]:
                 "location": None,
             }
         )
+    if result.llm is not None and result.llm.fallback_reason:
+        warnings.append(
+            {
+                "code": "llm.planning_fallback",
+                "message": (
+                    "LLM planning failed; using the deterministic default plan. "
+                    "Analyzer findings are unchanged."
+                ),
+                "location": None,
+            }
+        )
     return sort_warnings(warnings)
+
+
+def _llm_fields(
+    result: AnalysisResult,
+    *,
+    llm_enabled: bool,
+    resolved_plan_id: str,
+) -> dict[str, object]:
+    meta = result.llm
+    if meta is None:
+        return {
+            "enabled": llm_enabled,
+            "provider": None,
+            "model": None,
+            "advisory_features_used": [],
+            "invocation_count": 0,
+            "planning_used": False,
+            "resolved_plan_id": resolved_plan_id,
+        }
+    return meta.to_report_fields()
 
 
 def report_json(
@@ -202,17 +247,24 @@ def report_json(
                     "paths_explored_advanced": 0,
                 },
             },
-            "llm": {
-                "enabled": llm_enabled,
-                "provider": None,
-                "model": None,
-                "advisory_features_used": [],
-                "invocation_count": 0,
-                "planning_used": False,
-                "resolved_plan_id": resolved_plan_id,
-            },
+            "llm": _llm_fields(
+                result, llm_enabled=llm_enabled, resolved_plan_id=resolved_plan_id
+            ),
         },
-        "findings": [finding_to_json(f) for f in findings],
+        "findings": [
+            finding_to_json(
+                f,
+                advisory_items=(
+                    result.llm.finding_advisory.get(f.id, ())
+                    if result.llm is not None
+                    else ()
+                ),
+                advisory_provider=(
+                    result.llm.provider if result.llm is not None else None
+                ),
+            )
+            for f in findings
+        ],
         "recommendations": _recommendations_for(findings),
         "warnings": _warnings_for(result),
         "errors": sort_errors([]),

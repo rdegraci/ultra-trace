@@ -25,6 +25,12 @@ def test_merge_and_cli_precedence(tmp_path: Path, monkeypatch: object) -> None:
     assert cfg2.max_depth == 12
     assert cfg2.llm.enabled is False
 
+    enabled = apply_cli_overrides(
+        cfg, llm_enabled=True, privacy_mode="offline"
+    )
+    assert enabled.privacy_mode == "offline"
+    assert enabled.llm.enabled is False
+
 
 def test_builtin_defaults() -> None:
     cfg = UltraTraceConfig()

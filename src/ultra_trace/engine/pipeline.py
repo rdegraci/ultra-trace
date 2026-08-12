@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Sequence
 
@@ -12,6 +12,8 @@ from ultra_trace.discovery.scanner import RepositoryFile, default_scanner
 from ultra_trace.engine.explorer import ExplorationResult, PathExplorer
 from ultra_trace.frontend.models import FrontendSymbol, FrontendUnit, flatten_symbols
 from ultra_trace.frontend.summaries import LocalUnknownSummaryProvider
+from ultra_trace.llm.models import LLMRunMetadata
+from ultra_trace.llm.session import LLMSession
 from ultra_trace.parser.helper import invoke_helper
 from ultra_trace.rules.pack import core_rules
 from ultra_trace.swift_frontend import normalize_helper_output
@@ -26,6 +28,7 @@ class AnalysisResult:
     functions_analyzed: int
     graphs: tuple[ControlFlowGraph, ...]
     files_discovered: int
+    llm: LLMRunMetadata | None = None
 
 
 def analyze_unit(
@@ -116,6 +119,13 @@ def analyze_repository(
             exclude_paths=cfg.exclude_paths,
         )
     )
+    session = LLMSession(cfg)
+    plan = session.resolve_plan()
+    catalog = TaintCatalog.from_patterns(
+        sources=cfg.source_patterns,
+        sinks=cfg.sink_patterns,
+        sanitizers=cfg.sanitizer_patterns,
+    )
     if not discovered:
         empty = normalize_helper_output(
             {
@@ -124,16 +134,13 @@ def analyze_repository(
                 "files": [],
             }
         )
-        return analyze_unit(
+        result = analyze_unit(
             empty,
-            max_depth=cfg.max_depth,
+            max_depth=plan.max_depth,
             files_discovered=0,
-            taint_catalog=TaintCatalog.from_patterns(
-                sources=cfg.source_patterns,
-                sinks=cfg.sink_patterns,
-                sanitizers=cfg.sanitizer_patterns,
-            ),
+            taint_catalog=catalog,
         )
+        return replace(result, llm=session.metadata_after(plan, result.findings))
 
     helper = invoke_helper(
         repo_root=repo_root,
@@ -145,13 +152,10 @@ def analyze_repository(
         fail_on_parser_drift=fail_on_parser_drift,
     )
     unit = normalize_helper_output(helper.payload)
-    return analyze_unit(
+    result = analyze_unit(
         unit,
-        max_depth=cfg.max_depth,
+        max_depth=plan.max_depth,
         files_discovered=len(discovered),
-        taint_catalog=TaintCatalog.from_patterns(
-            sources=cfg.source_patterns,
-            sinks=cfg.sink_patterns,
-            sanitizers=cfg.sanitizer_patterns,
-        ),
+        taint_catalog=catalog,
     )
+    return replace(result, llm=session.metadata_after(plan, result.findings))

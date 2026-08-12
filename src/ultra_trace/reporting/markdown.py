@@ -173,7 +173,11 @@ def markdown_from_payload(payload: Mapping[str, Any]) -> str:
         content = advisory.get("content")
         if advisory.get("llm_used") and isinstance(content, list) and content:
             advisory_blocks.append(str(finding.get("id")))
-    if advisory_blocks:
+    llm_meta = _map(analysis.get("llm"))
+    report_summary = llm_meta.get("report_summary")
+    if advisory_blocks or (
+        isinstance(report_summary, str) and report_summary.strip()
+    ):
         lines.extend(
             [
                 "## Advisory",
@@ -181,6 +185,8 @@ def markdown_from_payload(payload: Mapping[str, Any]) -> str:
                 "",
             ]
         )
+        if isinstance(report_summary, str) and report_summary.strip():
+            lines.extend([report_summary.strip(), ""])
     return "\n".join(lines)
 
 
