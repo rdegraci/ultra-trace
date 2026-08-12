@@ -1,0 +1,179 @@
+{
+  "diagnostics": [],
+  "errors": [],
+  "files": [
+    {
+      "absolute_path": "/Users/rdegraci/Hack/ultra-trace/fixtures/swift/rules/forced_cast_risk.swift",
+      "calls": [],
+      "diagnostics": [],
+      "functions": [
+        {
+          "body_end_column": 2,
+          "body_end_line": 3,
+          "body_start_column": 37,
+          "body_start_line": 1,
+          "end_column": 2,
+          "end_line": 3,
+          "kind": "function",
+          "name": "castLoose",
+          "parameters": [
+            {
+              "end_column": 28,
+              "end_line": 1,
+              "external_name": "_",
+              "local_name": "value",
+              "start_column": 16,
+              "start_line": 1,
+              "type_annotation": "Any"
+            }
+          ],
+          "parent_type": null,
+          "return_annotation": "Int",
+          "start_column": 1,
+          "start_line": 1,
+          "statements": [
+            {
+              "end_column": 25,
+              "end_line": 2,
+              "kind": "return_statement",
+              "start_column": 5,
+              "start_line": 2,
+              "value": {
+                "end_column": 25,
+                "end_line": 2,
+                "kind": "forced_cast",
+                "operand": {
+                  "end_column": 17,
+                  "end_line": 2,
+                  "kind": "identifier",
+                  "name": "value",
+                  "start_column": 12,
+                  "start_line": 2
+                },
+                "start_column": 12,
+                "start_line": 2,
+                "type_name": "Int"
+              }
+            }
+          ]
+        },
+        {
+          "body_end_column": 2,
+          "body_end_line": 10,
+          "body_start_column": 39,
+          "body_start_line": 5,
+          "end_column": 2,
+          "end_line": 10,
+          "kind": "function",
+          "name": "castGuarded",
+          "parameters": [
+            {
+              "end_column": 30,
+              "end_line": 5,
+              "external_name": "_",
+              "local_name": "value",
+              "start_column": 18,
+              "start_line": 5,
+              "type_annotation": "Any"
+            }
+          ],
+          "parent_type": null,
+          "return_annotation": "Int",
+          "start_column": 1,
+          "start_line": 5,
+          "statements": [
+            {
+              "condition": {
+                "end_column": 20,
+                "end_line": 6,
+                "kind": "unknown",
+                "start_column": 8,
+                "start_line": 6,
+                "text": "value is Int"
+              },
+              "end_column": 6,
+              "end_line": 8,
+              "kind": "if_statement",
+              "start_column": 5,
+              "start_line": 6,
+              "then_statements": [
+                {
+                  "end_column": 29,
+                  "end_line": 7,
+                  "kind": "return_statement",
+                  "start_column": 9,
+                  "start_line": 7,
+                  "value": {
+                    "end_column": 29,
+                    "end_line": 7,
+                    "kind": "forced_cast",
+                    "operand": {
+                      "end_column": 21,
+                      "end_line": 7,
+                      "kind": "identifier",
+                      "name": "value",
+                      "start_column": 16,
+                      "start_line": 7
+                    },
+                    "start_column": 16,
+                    "start_line": 7,
+                    "type_name": "Int"
+                  }
+                }
+              ]
+            },
+            {
+              "end_column": 13,
+              "end_line": 9,
+              "kind": "return_statement",
+              "start_column": 5,
+              "start_line": 9,
+              "value": {
+                "end_column": 13,
+                "end_line": 9,
+                "kind": "literal",
+                "start_column": 12,
+                "start_line": 9,
+                "text": "0"
+              }
+            }
+          ]
+        }
+      ],
+      "line_count": 11,
+      "markers": [
+        {
+          "detail": "as!",
+          "end_column": 21,
+          "end_line": 2,
+          "kind": "as_bang",
+          "start_column": 18,
+          "start_line": 2
+        },
+        {
+          "detail": "as!",
+          "end_column": 25,
+          "end_line": 7,
+          "kind": "as_bang",
+          "start_column": 22,
+          "start_line": 7
+        }
+      ],
+      "parse_ok": true,
+      "path": "fixtures/swift/rules/forced_cast_risk.swift",
+      "types": [],
+      "unsupported": []
+    }
+  ],
+  "helper_version": "0.1.0",
+  "parser_metadata": {
+    "invocation_mode": "subprocess-json",
+    "parser_name": "swift-parser-helper",
+    "parser_version": "0.1.0",
+    "supports_recovery": false,
+    "swift_syntax_version": "602.0.0",
+    "toolchain_name": "Apple Swift",
+    "toolchain_version": "swift-driver version: 1.127.14.1 Apple Swift version 6.2.3 (swiftlang-6.2.3.3.21 clang-1700.6.3.2)"
+  },
+  "schema_version": "1.0"
+}

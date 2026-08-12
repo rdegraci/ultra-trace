@@ -1,18 +1,23 @@
-from ultra_trace.rules.force_unwrap import RULE_ID, ForceUnwrapRiskRule
+from ultra_trace.rules.array_bounds import ArrayBoundsRiskRule
+from ultra_trace.rules.dead_branch import DeadBranchCandidateRule
+from ultra_trace.rules.force_unwrap import ForceUnwrapRiskRule
+from ultra_trace.rules.forced_cast import ForcedCastRiskRule
+from ultra_trace.rules.pack import CORE_RULE_IDS, core_rules
+from ultra_trace.rules.shallow_taint import ShallowTaintFlowRule
+from ultra_trace.rules.try_bang import TryBangRiskRule
 
-IMPLEMENTED_RULES: tuple[str, ...] = (RULE_ID,)
-DECLARED_RULES: tuple[str, ...] = (
-    "swift.force_unwrap_risk",
-    "swift.try_bang_risk",
-    "swift.forced_cast_risk",
-    "swift.array_bounds_risk",
-    "swift.shallow_taint_flow",
-    "swift.dead_branch_candidate",
-)
+DECLARED_RULES: tuple[str, ...] = CORE_RULE_IDS
+IMPLEMENTED_RULES: tuple[str, ...] = CORE_RULE_IDS
 
 __all__ = [
+    "ArrayBoundsRiskRule",
+    "CORE_RULE_IDS",
     "DECLARED_RULES",
-    "IMPLEMENTED_RULES",
+    "DeadBranchCandidateRule",
     "ForceUnwrapRiskRule",
-    "RULE_ID",
+    "ForcedCastRiskRule",
+    "IMPLEMENTED_RULES",
+    "ShallowTaintFlowRule",
+    "TryBangRiskRule",
+    "core_rules",
 ]

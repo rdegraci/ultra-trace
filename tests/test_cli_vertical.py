@@ -30,6 +30,7 @@ def test_list_rules_marks_force_unwrap_implemented(
     result = runner.invoke(app, ["list-rules"])
     assert result.exit_code == 0
     assert "swift.force_unwrap_risk (implemented)" in result.stdout
+    assert "swift.dead_branch_candidate (implemented)" in result.stdout
 
 
 @pytest.mark.skipif(not _helper_available(), reason="helper not built")

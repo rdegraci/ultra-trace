@@ -24,7 +24,12 @@ def test_list_rules(tmp_path: Path, monkeypatch: object) -> None:
     monkeypatch.setenv(APP_DIR_ENV, str(tmp_path / "app"))  # type: ignore[attr-defined]
     result = runner.invoke(app, ["list-rules"])
     assert result.exit_code == 0
-    assert "swift.force_unwrap_risk" in result.stdout
+    assert "swift.force_unwrap_risk (implemented)" in result.stdout
+    assert "swift.try_bang_risk (implemented)" in result.stdout
+    assert "swift.forced_cast_risk (implemented)" in result.stdout
+    assert "swift.array_bounds_risk (implemented)" in result.stdout
+    assert "swift.shallow_taint_flow (implemented)" in result.stdout
+    assert "swift.dead_branch_candidate (implemented)" in result.stdout
 
 
 def test_analyze_dry_run(tmp_path: Path, monkeypatch: object) -> None:

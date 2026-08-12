@@ -53,9 +53,45 @@ llm:
     - report_summary
     - proof_prose_polishing
 
-# Shallow taint (override per project as needed)
-sourcePatterns: []
-sinkPatterns: []
+# Shallow taint (starter iOS catalog). Override per project.
+# Empty lists disable matching for that category.
+sourcePatterns:
+  - UITextField.text
+  - UITextView.text
+  - UISearchBar.text
+  - URLQueryItem.value
+  - URLComponents.query
+  - URLComponents.queryItems
+  - ProcessInfo.environment
+  - CommandLine.arguments
+  - UserDefaults.string
+  - UserDefaults.object
+  - WKScriptMessage.body
+  - Notification.userInfo
+  - JSONSerialization.jsonObject
+sinkPatterns:
+  - FileManager.default.createFile
+  - FileManager.createFile
+  - createFile
+  - "write(to:"
+  - String.write
+  - Data.write
+  - URLSession.shared.dataTask
+  - URLSession.dataTask
+  - dataTask
+  - WKWebView.loadHTMLString
+  - loadHTMLString
+  - evaluateJavaScript
+  - NSPredicate
+  - Process.launch
+sanitizerPatterns:
+  - addingPercentEncoding
+  - "addingPercentEncoding(withAllowedCharacters"
+  - standardizedFileURL
+  - resolvingSymlinksInPath
+  - standardized
+  - escaped
+  - sanitized
 
 # Swift Core frontend
 swiftFrontend:

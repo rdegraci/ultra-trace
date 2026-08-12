@@ -1,0 +1,421 @@
+{
+  "diagnostics": [],
+  "errors": [],
+  "files": [
+    {
+      "absolute_path": "/Users/rdegraci/Hack/ultra-trace/fixtures/swift/rules/array_bounds_risk.swift",
+      "calls": [],
+      "diagnostics": [],
+      "functions": [
+        {
+          "body_end_column": 2,
+          "body_end_line": 3,
+          "body_start_column": 56,
+          "body_start_line": 1,
+          "end_column": 2,
+          "end_line": 3,
+          "kind": "function",
+          "name": "unguardedIndex",
+          "parameters": [
+            {
+              "end_column": 36,
+              "end_line": 1,
+              "external_name": "_",
+              "local_name": "items",
+              "start_column": 21,
+              "start_line": 1,
+              "type_annotation": "[Int]"
+            },
+            {
+              "end_column": 47,
+              "end_line": 1,
+              "external_name": "index",
+              "local_name": "index",
+              "start_column": 37,
+              "start_line": 1,
+              "type_annotation": "Int"
+            }
+          ],
+          "parent_type": null,
+          "return_annotation": "Int",
+          "start_column": 1,
+          "start_line": 1,
+          "statements": [
+            {
+              "end_column": 24,
+              "end_line": 2,
+              "kind": "return_statement",
+              "start_column": 5,
+              "start_line": 2,
+              "value": {
+                "arguments": [
+                  {
+                    "end_column": 23,
+                    "end_line": 2,
+                    "kind": "identifier",
+                    "name": "index",
+                    "start_column": 18,
+                    "start_line": 2
+                  }
+                ],
+                "base": {
+                  "end_column": 17,
+                  "end_line": 2,
+                  "kind": "identifier",
+                  "name": "items",
+                  "start_column": 12,
+                  "start_line": 2
+                },
+                "end_column": 24,
+                "end_line": 2,
+                "kind": "subscript",
+                "start_column": 12,
+                "start_line": 2
+              }
+            }
+          ]
+        },
+        {
+          "body_end_column": 2,
+          "body_end_line": 8,
+          "body_start_column": 54,
+          "body_start_line": 5,
+          "end_column": 2,
+          "end_line": 8,
+          "kind": "function",
+          "name": "guardedIndex",
+          "parameters": [
+            {
+              "end_column": 34,
+              "end_line": 5,
+              "external_name": "_",
+              "local_name": "items",
+              "start_column": 19,
+              "start_line": 5,
+              "type_annotation": "[Int]"
+            },
+            {
+              "end_column": 45,
+              "end_line": 5,
+              "external_name": "index",
+              "local_name": "index",
+              "start_column": 35,
+              "start_line": 5,
+              "type_annotation": "Int"
+            }
+          ],
+          "parent_type": null,
+          "return_annotation": "Int",
+          "start_column": 1,
+          "start_line": 5,
+          "statements": [
+            {
+              "condition": {
+                "end_column": 30,
+                "end_line": 6,
+                "kind": "binary_operator",
+                "left": {
+                  "end_column": 16,
+                  "end_line": 6,
+                  "kind": "identifier",
+                  "name": "index",
+                  "start_column": 11,
+                  "start_line": 6
+                },
+                "operator": "<",
+                "right": {
+                  "base": {
+                    "end_column": 24,
+                    "end_line": 6,
+                    "kind": "identifier",
+                    "name": "items",
+                    "start_column": 19,
+                    "start_line": 6
+                  },
+                  "end_column": 30,
+                  "end_line": 6,
+                  "kind": "member_access",
+                  "member": "count",
+                  "start_column": 19,
+                  "start_line": 6
+                },
+                "start_column": 11,
+                "start_line": 6
+              },
+              "else_statements": [
+                {
+                  "end_column": 46,
+                  "end_line": 6,
+                  "kind": "return_statement",
+                  "start_column": 38,
+                  "start_line": 6,
+                  "value": {
+                    "end_column": 46,
+                    "end_line": 6,
+                    "kind": "literal",
+                    "start_column": 45,
+                    "start_line": 6,
+                    "text": "0"
+                  }
+                }
+              ],
+              "end_column": 48,
+              "end_line": 6,
+              "kind": "guard_statement",
+              "start_column": 5,
+              "start_line": 6
+            },
+            {
+              "end_column": 24,
+              "end_line": 7,
+              "kind": "return_statement",
+              "start_column": 5,
+              "start_line": 7,
+              "value": {
+                "arguments": [
+                  {
+                    "end_column": 23,
+                    "end_line": 7,
+                    "kind": "identifier",
+                    "name": "index",
+                    "start_column": 18,
+                    "start_line": 7
+                  }
+                ],
+                "base": {
+                  "end_column": 17,
+                  "end_line": 7,
+                  "kind": "identifier",
+                  "name": "items",
+                  "start_column": 12,
+                  "start_line": 7
+                },
+                "end_column": 24,
+                "end_line": 7,
+                "kind": "subscript",
+                "start_column": 12,
+                "start_line": 7
+              }
+            }
+          ]
+        },
+        {
+          "body_end_column": 2,
+          "body_end_line": 13,
+          "body_start_column": 27,
+          "body_start_line": 10,
+          "end_column": 2,
+          "end_line": 13,
+          "kind": "function",
+          "name": "literalSafe",
+          "parameters": [],
+          "parent_type": null,
+          "return_annotation": "Int",
+          "start_column": 1,
+          "start_line": 10,
+          "statements": [
+            {
+              "end_column": 26,
+              "end_line": 11,
+              "initializer": {
+                "elements": [
+                  {
+                    "end_column": 19,
+                    "end_line": 11,
+                    "kind": "literal",
+                    "start_column": 18,
+                    "start_line": 11,
+                    "text": "1"
+                  },
+                  {
+                    "end_column": 22,
+                    "end_line": 11,
+                    "kind": "literal",
+                    "start_column": 21,
+                    "start_line": 11,
+                    "text": "2"
+                  },
+                  {
+                    "end_column": 25,
+                    "end_line": 11,
+                    "kind": "literal",
+                    "start_column": 24,
+                    "start_line": 11,
+                    "text": "3"
+                  }
+                ],
+                "end_column": 26,
+                "end_line": 11,
+                "kind": "array_literal",
+                "start_column": 17,
+                "start_line": 11
+              },
+              "kind": "variable_declaration",
+              "names": [
+                "items"
+              ],
+              "start_column": 5,
+              "start_line": 11,
+              "type_annotation": null
+            },
+            {
+              "end_column": 20,
+              "end_line": 12,
+              "kind": "return_statement",
+              "start_column": 5,
+              "start_line": 12,
+              "value": {
+                "arguments": [
+                  {
+                    "end_column": 19,
+                    "end_line": 12,
+                    "kind": "literal",
+                    "start_column": 18,
+                    "start_line": 12,
+                    "text": "0"
+                  }
+                ],
+                "base": {
+                  "end_column": 17,
+                  "end_line": 12,
+                  "kind": "identifier",
+                  "name": "items",
+                  "start_column": 12,
+                  "start_line": 12
+                },
+                "end_column": 20,
+                "end_line": 12,
+                "kind": "subscript",
+                "start_column": 12,
+                "start_line": 12
+              }
+            }
+          ]
+        },
+        {
+          "body_end_column": 2,
+          "body_end_line": 18,
+          "body_start_column": 26,
+          "body_start_line": 15,
+          "end_column": 2,
+          "end_line": 18,
+          "kind": "function",
+          "name": "literalOOB",
+          "parameters": [],
+          "parent_type": null,
+          "return_annotation": "Int",
+          "start_column": 1,
+          "start_line": 15,
+          "statements": [
+            {
+              "end_column": 20,
+              "end_line": 16,
+              "initializer": {
+                "elements": [
+                  {
+                    "end_column": 19,
+                    "end_line": 16,
+                    "kind": "literal",
+                    "start_column": 18,
+                    "start_line": 16,
+                    "text": "1"
+                  }
+                ],
+                "end_column": 20,
+                "end_line": 16,
+                "kind": "array_literal",
+                "start_column": 17,
+                "start_line": 16
+              },
+              "kind": "variable_declaration",
+              "names": [
+                "items"
+              ],
+              "start_column": 5,
+              "start_line": 16,
+              "type_annotation": null
+            },
+            {
+              "end_column": 20,
+              "end_line": 17,
+              "kind": "return_statement",
+              "start_column": 5,
+              "start_line": 17,
+              "value": {
+                "arguments": [
+                  {
+                    "end_column": 19,
+                    "end_line": 17,
+                    "kind": "literal",
+                    "start_column": 18,
+                    "start_line": 17,
+                    "text": "4"
+                  }
+                ],
+                "base": {
+                  "end_column": 17,
+                  "end_line": 17,
+                  "kind": "identifier",
+                  "name": "items",
+                  "start_column": 12,
+                  "start_line": 17
+                },
+                "end_column": 20,
+                "end_line": 17,
+                "kind": "subscript",
+                "start_column": 12,
+                "start_line": 17
+              }
+            }
+          ]
+        }
+      ],
+      "line_count": 19,
+      "markers": [
+        {
+          "end_column": 24,
+          "end_line": 2,
+          "kind": "subscript",
+          "start_column": 12,
+          "start_line": 2
+        },
+        {
+          "end_column": 24,
+          "end_line": 7,
+          "kind": "subscript",
+          "start_column": 12,
+          "start_line": 7
+        },
+        {
+          "end_column": 20,
+          "end_line": 12,
+          "kind": "subscript",
+          "start_column": 12,
+          "start_line": 12
+        },
+        {
+          "end_column": 20,
+          "end_line": 17,
+          "kind": "subscript",
+          "start_column": 12,
+          "start_line": 17
+        }
+      ],
+      "parse_ok": true,
+      "path": "fixtures/swift/rules/array_bounds_risk.swift",
+      "types": [],
+      "unsupported": []
+    }
+  ],
+  "helper_version": "0.1.0",
+  "parser_metadata": {
+    "invocation_mode": "subprocess-json",
+    "parser_name": "swift-parser-helper",
+    "parser_version": "0.1.0",
+    "supports_recovery": false,
+    "swift_syntax_version": "602.0.0",
+    "toolchain_name": "Apple Swift",
+    "toolchain_version": "swift-driver version: 1.127.14.1 Apple Swift version 6.2.3 (swiftlang-6.2.3.3.21 clang-1700.6.3.2)"
+  },
+  "schema_version": "1.0"
+}

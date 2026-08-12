@@ -13,8 +13,9 @@ from ultra_trace.engine.explorer import ExplorationResult, PathExplorer
 from ultra_trace.frontend.models import FrontendSymbol, FrontendUnit, flatten_symbols
 from ultra_trace.frontend.summaries import LocalUnknownSummaryProvider
 from ultra_trace.parser.helper import invoke_helper
-from ultra_trace.rules.force_unwrap import ForceUnwrapRiskRule
+from ultra_trace.rules.pack import core_rules
 from ultra_trace.swift_frontend import normalize_helper_output
+from ultra_trace.taint.catalog import TaintCatalog
 
 
 @dataclass(frozen=True)
@@ -32,11 +33,15 @@ def analyze_unit(
     *,
     max_depth: int,
     files_discovered: int | None = None,
+    taint_catalog: TaintCatalog | None = None,
 ) -> AnalysisResult:
+    catalog = taint_catalog or TaintCatalog.starter()
     builder = CFGBuilder()
     summaries = LocalUnknownSummaryProvider(dict(unit.symbols_by_id))
-    explorer = PathExplorer(max_depth=max_depth, summaries=summaries)
-    rule = ForceUnwrapRiskRule()
+    explorer = PathExplorer(
+        max_depth=max_depth, summaries=summaries, taint_catalog=catalog
+    )
+    rules = core_rules(catalog)
     findings: list[Finding] = []
     graphs: list[ControlFlowGraph] = []
     path_count = 0
@@ -68,11 +73,12 @@ def analyze_unit(
         explored = explorer.explore(symbol, graph)
         path_count += explored.path_count
         analyzed += 1
-        findings.extend(
-            rule.evaluate(
-                symbol=symbol, cfg=graph, exploration=explored, unit=unit
+        for rule in rules:
+            findings.extend(
+                rule.evaluate(
+                    symbol=symbol, cfg=graph, exploration=explored, unit=unit
+                )
             )
-        )
 
     findings.sort(
         key=lambda f: (
@@ -118,7 +124,16 @@ def analyze_repository(
                 "files": [],
             }
         )
-        return analyze_unit(empty, max_depth=cfg.max_depth, files_discovered=0)
+        return analyze_unit(
+            empty,
+            max_depth=cfg.max_depth,
+            files_discovered=0,
+            taint_catalog=TaintCatalog.from_patterns(
+                sources=cfg.source_patterns,
+                sinks=cfg.sink_patterns,
+                sanitizers=cfg.sanitizer_patterns,
+            ),
+        )
 
     helper = invoke_helper(
         repo_root=repo_root,
@@ -131,5 +146,12 @@ def analyze_repository(
     )
     unit = normalize_helper_output(helper.payload)
     return analyze_unit(
-        unit, max_depth=cfg.max_depth, files_discovered=len(discovered)
+        unit,
+        max_depth=cfg.max_depth,
+        files_discovered=len(discovered),
+        taint_catalog=TaintCatalog.from_patterns(
+            sources=cfg.source_patterns,
+            sinks=cfg.sink_patterns,
+            sanitizers=cfg.sanitizer_patterns,
+        ),
     )

@@ -4,6 +4,51 @@ from ultra_trace.core.findings import ProofArtifact
 from ultra_trace.frontend.models import SourceSpan
 
 
+def repro_proof(
+    *,
+    trigger: str,
+    expected: str,
+    steps: str,
+    assumptions: tuple[str, ...],
+    high: bool,
+    medium_kind: str = "path_witness",
+) -> ProofArtifact:
+    if high:
+        return ProofArtifact(
+            tier=2,
+            kind="repro_steps",
+            supported=True,
+            trigger_condition=trigger,
+            expected_behavior=expected,
+            assumptions=assumptions,
+            content=steps,
+            language="text",
+        )
+    return ProofArtifact(
+        tier=3,
+        kind=medium_kind,
+        supported=True,
+        trigger_condition=trigger,
+        expected_behavior=expected,
+        assumptions=assumptions,
+        content=steps,
+        language="text",
+    )
+
+
+def unsupported_proof(*, trigger: str, expected: str, reason: str) -> ProofArtifact:
+    return ProofArtifact(
+        tier=4,
+        kind="unsupported",
+        supported=False,
+        trigger_condition=trigger,
+        expected_behavior=expected,
+        assumptions=(reason,),
+        content=reason,
+        language="text",
+    )
+
+
 def proof_for_force_unwrap(
     *,
     location: SourceSpan,

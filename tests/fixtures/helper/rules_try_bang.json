@@ -1,0 +1,325 @@
+{
+  "diagnostics": [],
+  "errors": [],
+  "files": [
+    {
+      "absolute_path": "/Users/rdegraci/Hack/ultra-trace/fixtures/swift/rules/try_bang_risk.swift",
+      "calls": [
+        {
+          "callee": "parse",
+          "end_column": 28,
+          "end_line": 11,
+          "start_column": 17,
+          "start_line": 11
+        },
+        {
+          "callee": "parse",
+          "end_column": 31,
+          "end_line": 16,
+          "start_column": 20,
+          "start_line": 16
+        }
+      ],
+      "diagnostics": [],
+      "functions": [
+        {
+          "body_end_column": 2,
+          "body_end_line": 8,
+          "body_start_column": 42,
+          "body_start_line": 5,
+          "end_column": 2,
+          "end_line": 8,
+          "kind": "function",
+          "name": "parse",
+          "parameters": [
+            {
+              "end_column": 26,
+              "end_line": 5,
+              "external_name": "_",
+              "local_name": "text",
+              "start_column": 12,
+              "start_line": 5,
+              "type_annotation": "String"
+            }
+          ],
+          "parent_type": null,
+          "return_annotation": "Int",
+          "start_column": 1,
+          "start_line": 5,
+          "statements": [
+            {
+              "condition": {
+                "base": {
+                  "end_column": 12,
+                  "end_line": 6,
+                  "kind": "identifier",
+                  "name": "text",
+                  "start_column": 8,
+                  "start_line": 6
+                },
+                "end_column": 20,
+                "end_line": 6,
+                "kind": "member_access",
+                "member": "isEmpty",
+                "start_column": 8,
+                "start_line": 6
+              },
+              "end_column": 45,
+              "end_line": 6,
+              "kind": "if_statement",
+              "start_column": 5,
+              "start_line": 6,
+              "then_statements": [
+                {
+                  "end_column": 43,
+                  "end_line": 6,
+                  "kind": "throw_statement",
+                  "start_column": 23,
+                  "start_line": 6,
+                  "value": {
+                    "base": {
+                      "end_column": 39,
+                      "end_line": 6,
+                      "kind": "identifier",
+                      "name": "ParseError",
+                      "start_column": 29,
+                      "start_line": 6
+                    },
+                    "end_column": 43,
+                    "end_line": 6,
+                    "kind": "member_access",
+                    "member": "bad",
+                    "start_column": 29,
+                    "start_line": 6
+                  }
+                }
+              ]
+            },
+            {
+              "end_column": 13,
+              "end_line": 7,
+              "kind": "return_statement",
+              "start_column": 5,
+              "start_line": 7,
+              "value": {
+                "end_column": 13,
+                "end_line": 7,
+                "kind": "literal",
+                "start_column": 12,
+                "start_line": 7,
+                "text": "1"
+              }
+            }
+          ]
+        },
+        {
+          "body_end_column": 2,
+          "body_end_line": 12,
+          "body_start_column": 40,
+          "body_start_line": 10,
+          "end_column": 2,
+          "end_line": 12,
+          "kind": "function",
+          "name": "crashParse",
+          "parameters": [
+            {
+              "end_column": 31,
+              "end_line": 10,
+              "external_name": "_",
+              "local_name": "text",
+              "start_column": 17,
+              "start_line": 10,
+              "type_annotation": "String"
+            }
+          ],
+          "parent_type": null,
+          "return_annotation": "Int",
+          "start_column": 1,
+          "start_line": 10,
+          "statements": [
+            {
+              "end_column": 28,
+              "end_line": 11,
+              "kind": "return_statement",
+              "start_column": 5,
+              "start_line": 11,
+              "value": {
+                "end_column": 28,
+                "end_line": 11,
+                "kind": "try_expression",
+                "operand": {
+                  "arguments": [
+                    {
+                      "end_column": 27,
+                      "end_line": 11,
+                      "kind": "identifier",
+                      "name": "text",
+                      "start_column": 23,
+                      "start_line": 11
+                    }
+                  ],
+                  "callee": {
+                    "end_column": 22,
+                    "end_line": 11,
+                    "kind": "identifier",
+                    "name": "parse",
+                    "start_column": 17,
+                    "start_line": 11
+                  },
+                  "callee_text": "parse",
+                  "end_column": 28,
+                  "end_line": 11,
+                  "is_try": true,
+                  "is_try_force": true,
+                  "is_try_optional": false,
+                  "kind": "call",
+                  "start_column": 17,
+                  "start_line": 11
+                },
+                "start_column": 12,
+                "start_line": 11,
+                "style": "try!"
+              }
+            }
+          ]
+        },
+        {
+          "body_end_column": 2,
+          "body_end_line": 20,
+          "body_start_column": 42,
+          "body_start_line": 14,
+          "end_column": 2,
+          "end_line": 20,
+          "kind": "function",
+          "name": "handledParse",
+          "parameters": [
+            {
+              "end_column": 33,
+              "end_line": 14,
+              "external_name": "_",
+              "local_name": "text",
+              "start_column": 19,
+              "start_line": 14,
+              "type_annotation": "String"
+            }
+          ],
+          "parent_type": null,
+          "return_annotation": "Int",
+          "start_column": 1,
+          "start_line": 14,
+          "statements": [
+            {
+              "catches": [
+                {
+                  "statements": [
+                    {
+                      "end_column": 17,
+                      "end_line": 18,
+                      "kind": "return_statement",
+                      "start_column": 9,
+                      "start_line": 18,
+                      "value": {
+                        "end_column": 17,
+                        "end_line": 18,
+                        "kind": "literal",
+                        "start_column": 16,
+                        "start_line": 18,
+                        "text": "0"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "end_column": 6,
+              "end_line": 19,
+              "kind": "do_catch_statement",
+              "start_column": 5,
+              "start_line": 15,
+              "statements": [
+                {
+                  "end_column": 31,
+                  "end_line": 16,
+                  "kind": "return_statement",
+                  "start_column": 9,
+                  "start_line": 16,
+                  "value": {
+                    "end_column": 31,
+                    "end_line": 16,
+                    "kind": "try_expression",
+                    "operand": {
+                      "arguments": [
+                        {
+                          "end_column": 30,
+                          "end_line": 16,
+                          "kind": "identifier",
+                          "name": "text",
+                          "start_column": 26,
+                          "start_line": 16
+                        }
+                      ],
+                      "callee": {
+                        "end_column": 25,
+                        "end_line": 16,
+                        "kind": "identifier",
+                        "name": "parse",
+                        "start_column": 20,
+                        "start_line": 16
+                      },
+                      "callee_text": "parse",
+                      "end_column": 31,
+                      "end_line": 16,
+                      "is_try": true,
+                      "is_try_force": false,
+                      "is_try_optional": false,
+                      "kind": "call",
+                      "start_column": 20,
+                      "start_line": 16
+                    },
+                    "start_column": 16,
+                    "start_line": 16,
+                    "style": "try"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "line_count": 21,
+      "markers": [
+        {
+          "detail": "try!",
+          "end_column": 28,
+          "end_line": 11,
+          "kind": "try_bang",
+          "start_column": 12,
+          "start_line": 11
+        }
+      ],
+      "parse_ok": true,
+      "path": "fixtures/swift/rules/try_bang_risk.swift",
+      "types": [
+        {
+          "end_column": 2,
+          "end_line": 3,
+          "kind": "enum",
+          "name": "ParseError",
+          "start_column": 1,
+          "start_line": 1
+        }
+      ],
+      "unsupported": []
+    }
+  ],
+  "helper_version": "0.1.0",
+  "parser_metadata": {
+    "invocation_mode": "subprocess-json",
+    "parser_name": "swift-parser-helper",
+    "parser_version": "0.1.0",
+    "supports_recovery": false,
+    "swift_syntax_version": "602.0.0",
+    "toolchain_name": "Apple Swift",
+    "toolchain_version": "swift-driver version: 1.127.14.1 Apple Swift version 6.2.3 (swiftlang-6.2.3.3.21 clang-1700.6.3.2)"
+  },
+  "schema_version": "1.0"
+}

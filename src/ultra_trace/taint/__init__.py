@@ -1,0 +1,11 @@
+from ultra_trace.taint.defaults import (
+    STARTER_SANITIZER_PATTERNS,
+    STARTER_SINK_PATTERNS,
+    STARTER_SOURCE_PATTERNS,
+)
+
+__all__ = [
+    "STARTER_SANITIZER_PATTERNS",
+    "STARTER_SINK_PATTERNS",
+    "STARTER_SOURCE_PATTERNS",
+]

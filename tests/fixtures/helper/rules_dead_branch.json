@@ -1,0 +1,267 @@
+{
+  "diagnostics": [],
+  "errors": [],
+  "files": [
+    {
+      "absolute_path": "/Users/rdegraci/Hack/ultra-trace/fixtures/swift/rules/dead_branch_candidate.swift",
+      "calls": [],
+      "diagnostics": [],
+      "functions": [
+        {
+          "body_end_column": 2,
+          "body_end_line": 6,
+          "body_start_column": 27,
+          "body_start_line": 1,
+          "end_column": 2,
+          "end_line": 6,
+          "kind": "function",
+          "name": "deadIfFalse",
+          "parameters": [],
+          "parent_type": null,
+          "return_annotation": "Int",
+          "start_column": 1,
+          "start_line": 1,
+          "statements": [
+            {
+              "condition": {
+                "end_column": 13,
+                "end_line": 2,
+                "kind": "literal",
+                "start_column": 8,
+                "start_line": 2,
+                "text": "false"
+              },
+              "end_column": 6,
+              "end_line": 4,
+              "kind": "if_statement",
+              "start_column": 5,
+              "start_line": 2,
+              "then_statements": [
+                {
+                  "end_column": 17,
+                  "end_line": 3,
+                  "kind": "return_statement",
+                  "start_column": 9,
+                  "start_line": 3,
+                  "value": {
+                    "end_column": 17,
+                    "end_line": 3,
+                    "kind": "literal",
+                    "start_column": 16,
+                    "start_line": 3,
+                    "text": "1"
+                  }
+                }
+              ]
+            },
+            {
+              "end_column": 13,
+              "end_line": 5,
+              "kind": "return_statement",
+              "start_column": 5,
+              "start_line": 5,
+              "value": {
+                "end_column": 13,
+                "end_line": 5,
+                "kind": "literal",
+                "start_column": 12,
+                "start_line": 5,
+                "text": "0"
+              }
+            }
+          ]
+        },
+        {
+          "body_end_column": 2,
+          "body_end_line": 14,
+          "body_start_column": 29,
+          "body_start_line": 8,
+          "end_column": 2,
+          "end_line": 14,
+          "kind": "function",
+          "name": "deadAfterFact",
+          "parameters": [],
+          "parent_type": null,
+          "return_annotation": "Int",
+          "start_column": 1,
+          "start_line": 8,
+          "statements": [
+            {
+              "end_column": 21,
+              "end_line": 9,
+              "initializer": {
+                "end_column": 21,
+                "end_line": 9,
+                "kind": "literal",
+                "start_column": 16,
+                "start_line": 9,
+                "text": "false"
+              },
+              "kind": "variable_declaration",
+              "names": [
+                "flag"
+              ],
+              "start_column": 5,
+              "start_line": 9,
+              "type_annotation": null
+            },
+            {
+              "condition": {
+                "end_column": 12,
+                "end_line": 10,
+                "kind": "identifier",
+                "name": "flag",
+                "start_column": 8,
+                "start_line": 10
+              },
+              "end_column": 6,
+              "end_line": 12,
+              "kind": "if_statement",
+              "start_column": 5,
+              "start_line": 10,
+              "then_statements": [
+                {
+                  "end_column": 17,
+                  "end_line": 11,
+                  "kind": "return_statement",
+                  "start_column": 9,
+                  "start_line": 11,
+                  "value": {
+                    "end_column": 17,
+                    "end_line": 11,
+                    "kind": "literal",
+                    "start_column": 16,
+                    "start_line": 11,
+                    "text": "1"
+                  }
+                }
+              ]
+            },
+            {
+              "end_column": 13,
+              "end_line": 13,
+              "kind": "return_statement",
+              "start_column": 5,
+              "start_line": 13,
+              "value": {
+                "end_column": 13,
+                "end_line": 13,
+                "kind": "literal",
+                "start_column": 12,
+                "start_line": 13,
+                "text": "0"
+              }
+            }
+          ]
+        },
+        {
+          "body_end_column": 2,
+          "body_end_line": 21,
+          "body_start_column": 38,
+          "body_start_line": 16,
+          "end_column": 2,
+          "end_line": 21,
+          "kind": "function",
+          "name": "liveCompare",
+          "parameters": [
+            {
+              "end_column": 26,
+              "end_line": 16,
+              "external_name": "_",
+              "local_name": "n",
+              "start_column": 18,
+              "start_line": 16,
+              "type_annotation": "Int"
+            }
+          ],
+          "parent_type": null,
+          "return_annotation": "String",
+          "start_column": 1,
+          "start_line": 16,
+          "statements": [
+            {
+              "condition": {
+                "end_column": 14,
+                "end_line": 17,
+                "kind": "binary_operator",
+                "left": {
+                  "end_column": 9,
+                  "end_line": 17,
+                  "kind": "identifier",
+                  "name": "n",
+                  "start_column": 8,
+                  "start_line": 17
+                },
+                "operator": "==",
+                "right": {
+                  "end_column": 14,
+                  "end_line": 17,
+                  "kind": "literal",
+                  "start_column": 13,
+                  "start_line": 17,
+                  "text": "0"
+                },
+                "start_column": 8,
+                "start_line": 17
+              },
+              "end_column": 6,
+              "end_line": 19,
+              "kind": "if_statement",
+              "start_column": 5,
+              "start_line": 17,
+              "then_statements": [
+                {
+                  "end_column": 22,
+                  "end_line": 18,
+                  "kind": "return_statement",
+                  "start_column": 9,
+                  "start_line": 18,
+                  "value": {
+                    "end_column": 22,
+                    "end_line": 18,
+                    "kind": "literal",
+                    "start_column": 16,
+                    "start_line": 18,
+                    "text": "\"zero\""
+                  }
+                }
+              ]
+            },
+            {
+              "end_column": 19,
+              "end_line": 20,
+              "kind": "return_statement",
+              "start_column": 5,
+              "start_line": 20,
+              "value": {
+                "end_column": 19,
+                "end_line": 20,
+                "kind": "literal",
+                "start_column": 12,
+                "start_line": 20,
+                "text": "\"other\""
+              }
+            }
+          ]
+        }
+      ],
+      "line_count": 22,
+      "markers": [],
+      "parse_ok": true,
+      "path": "fixtures/swift/rules/dead_branch_candidate.swift",
+      "types": [],
+      "unsupported": []
+    }
+  ],
+  "helper_version": "0.1.0",
+  "parser_metadata": {
+    "invocation_mode": "subprocess-json",
+    "parser_name": "swift-parser-helper",
+    "parser_version": "0.1.0",
+    "supports_recovery": false,
+    "swift_syntax_version": "602.0.0",
+    "toolchain_name": "Apple Swift",
+    "toolchain_version": "swift-driver version: 1.127.14.1 Apple Swift version 6.2.3 (swiftlang-6.2.3.3.21 clang-1700.6.3.2)"
+  },
+  "schema_version": "1.0"
+}

@@ -7,6 +7,11 @@ from typing import Any, Literal, Mapping, Sequence
 import yaml
 
 from ultra_trace.paths import user_config_path
+from ultra_trace.taint.defaults import (
+    STARTER_SANITIZER_PATTERNS,
+    STARTER_SINK_PATTERNS,
+    STARTER_SOURCE_PATTERNS,
+)
 
 PrivacyMode = Literal["offline", "redacted", "full-assist"]
 SeverityLevel = Literal["low", "medium", "high", "critical"]
@@ -70,8 +75,9 @@ class UltraTraceConfig:
     proof_mode: str = "mixed"
     output_formats: tuple[OutputFormat, ...] = ("markdown", "json")
     privacy_mode: PrivacyMode = "offline"
-    source_patterns: tuple[str, ...] = ()
-    sink_patterns: tuple[str, ...] = ()
+    source_patterns: tuple[str, ...] = STARTER_SOURCE_PATTERNS
+    sink_patterns: tuple[str, ...] = STARTER_SINK_PATTERNS
+    sanitizer_patterns: tuple[str, ...] = STARTER_SANITIZER_PATTERNS
     llm: LLMConfig = field(default_factory=LLMConfig)
     swift_frontend: SwiftFrontendConfig = field(default_factory=SwiftFrontendConfig)
     advanced: AdvancedConfig = field(default_factory=AdvancedConfig)
@@ -90,6 +96,7 @@ _CAMEL_TO_SNAKE = {
     "privacyMode": "privacy_mode",
     "sourcePatterns": "source_patterns",
     "sinkPatterns": "sink_patterns",
+    "sanitizerPatterns": "sanitizer_patterns",
     "swiftFrontend": "swift_frontend",
     "callSummary": "call_summary",
     "baseURL": "base_url",
@@ -203,6 +210,7 @@ def merge_config(base: UltraTraceConfig, overlay: Mapping[str, Any]) -> UltraTra
                 "output_formats",
                 "source_patterns",
                 "sink_patterns",
+                "sanitizer_patterns",
             }:
                 kwargs[name] = tuple(value) if value is not None else ()
             else:

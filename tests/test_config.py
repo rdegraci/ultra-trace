@@ -31,3 +31,21 @@ def test_builtin_defaults() -> None:
     assert cfg.privacy_mode == "offline"
     assert cfg.llm.enabled is False
     assert "Pods" in cfg.exclude_paths
+    assert "UITextField.text" in cfg.source_patterns
+    assert "createFile" in cfg.sink_patterns
+    assert "addingPercentEncoding" in cfg.sanitizer_patterns
+
+
+def test_empty_taint_lists_disable_starter_catalog(
+    tmp_path: Path, monkeypatch: object
+) -> None:
+    monkeypatch.setenv(APP_DIR_ENV, str(tmp_path / "app"))  # type: ignore[attr-defined]
+    project = tmp_path / "ultra-trace.yml"
+    project.write_text(
+        "sourcePatterns: []\nsinkPatterns: []\nsanitizerPatterns: []\n",
+        encoding="utf-8",
+    )
+    cfg = load_layered_config(project_config=project, repo_root=tmp_path)
+    assert cfg.source_patterns == ()
+    assert cfg.sink_patterns == ()
+    assert cfg.sanitizer_patterns == ()

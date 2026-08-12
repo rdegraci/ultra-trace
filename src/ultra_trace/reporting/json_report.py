@@ -84,13 +84,22 @@ def _recommendations_for(findings: Sequence[Finding]) -> list[dict[str, object]]
             "Treat eligibility, unsupported-construct, and unresolved-call counts as coverage limits.",
         )
     ]
-    if any(f.rule_id == "swift.force_unwrap_risk" for f in findings):
-        texts.append(
-            (
-                "finding",
-                "Replace force unwraps with optional binding (`guard let` / `if let`) or `??`.",
-            )
-        )
+    rec_by_rule = {
+        "swift.force_unwrap_risk": (
+            "Replace force unwraps with optional binding (`guard let` / `if let`) or `??`."
+        ),
+        "swift.try_bang_risk": "Replace `try!` with `do`/`try`/`catch` or `try?`.",
+        "swift.forced_cast_risk": "Replace `as!` with `as?` or a dominating `is` check.",
+        "swift.array_bounds_risk": "Guard subscripts with `count` or `indices.contains`.",
+        "swift.shallow_taint_flow": "Sanitize configured sources before dangerous sinks.",
+        "swift.dead_branch_candidate": "Remove or correct locally unreachable branches.",
+    }
+    seen: set[str] = set()
+    for finding in findings:
+        text = rec_by_rule.get(finding.rule_id)
+        if text and text not in seen:
+            seen.add(text)
+            texts.append(("finding", text))
     return sort_recommendations([{"scope": scope, "text": text} for scope, text in texts])
 
 
