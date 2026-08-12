@@ -179,5 +179,3 @@ def classify_file(
         unsupported_construct_count=n_uns,
         warning_count=warning_count,
     )
-
-

@@ -49,12 +49,13 @@ def _cast_safe(event: ForcedCastEvent) -> bool:
     return event.proven_type == event.type_name
 
 
-def _finding(symbol: FrontendSymbol, event: ForcedCastEvent, path_count: int) -> Finding:
+def _finding(
+    symbol: FrontendSymbol, event: ForcedCastEvent, path_count: int
+) -> Finding:
     high = allow_high(symbol.eligibility)
     target = event.type_name or "the target type"
     path_summary = (
-        f"{len(event.path_node_ids)} nodes; {path_count} path(s); "
-        f"as! {target}"
+        f"{len(event.path_node_ids)} nodes; {path_count} path(s); as! {target}"
     )
     proof = repro_proof(
         trigger=(

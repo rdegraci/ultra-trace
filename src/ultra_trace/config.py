@@ -183,7 +183,9 @@ def _merge_call_summary(
     )
 
 
-def merge_config(base: UltraTraceConfig, overlay: Mapping[str, Any]) -> UltraTraceConfig:
+def merge_config(
+    base: UltraTraceConfig, overlay: Mapping[str, Any]
+) -> UltraTraceConfig:
     data = _normalize_keys(overlay)
     kwargs: dict[str, Any] = {}
     for f in fields(UltraTraceConfig):
@@ -284,9 +286,7 @@ def apply_cli_overrides(
             cfg.focus_modules if focus_modules is None else tuple(focus_modules)
         ),
         severity_threshold=(
-            cfg.severity_threshold
-            if severity_threshold is None
-            else severity_threshold
+            cfg.severity_threshold if severity_threshold is None else severity_threshold
         ),
         privacy_mode=cfg.privacy_mode if privacy_mode is None else privacy_mode,
         output_formats=(

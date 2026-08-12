@@ -63,7 +63,9 @@ def sanitize_for_mode(text: str, privacy_mode: str) -> str:
     return cleaned[:8000]
 
 
-def apply_env_llm_overrides(cfg: UltraTraceConfig, environ: dict[str, str]) -> UltraTraceConfig:
+def apply_env_llm_overrides(
+    cfg: UltraTraceConfig, environ: dict[str, str]
+) -> UltraTraceConfig:
     """Fill empty LLM knobs from process env. CLI still wins afterward."""
     llm = cfg.llm
     provider = environ.get("ULTRA_TRACE_LLM_PROVIDER", "").strip()

@@ -7,7 +7,6 @@ from typer.testing import CliRunner
 from ultra_trace.cli import app
 from ultra_trace.paths import APP_DIR_ENV
 
-
 runner = CliRunner()
 
 

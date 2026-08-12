@@ -60,12 +60,8 @@ def test_fail_on_parser_drift_overrides_warn_policy(
         lambda *args, **kwargs: drifted,
     )
     with pytest.raises(HelperVersionError):
-        validate_helper(
-            Path("/usr/bin/true"), pin=pin, fail_on_parser_drift=True
-        )
-    info = validate_helper(
-        Path("/usr/bin/true"), pin=pin, fail_on_parser_drift=False
-    )
+        validate_helper(Path("/usr/bin/true"), pin=pin, fail_on_parser_drift=True)
+    info = validate_helper(Path("/usr/bin/true"), pin=pin, fail_on_parser_drift=False)
     assert info.helper_version == "9.9.9"
 
 

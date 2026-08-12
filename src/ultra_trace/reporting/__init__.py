@@ -8,7 +8,11 @@ from ultra_trace.reporting.exit_codes import (
 )
 from ultra_trace.reporting.json_report import finding_to_json, report_json
 from ultra_trace.reporting.markdown import markdown_from_payload
-from ultra_trace.reporting.writers import ReportWriteResult, report_markdown, write_reports
+from ultra_trace.reporting.writers import (
+    ReportWriteResult,
+    report_markdown,
+    write_reports,
+)
 
 __all__ = [
     "EXIT_FINDINGS",

@@ -44,6 +44,8 @@ def emit_finding(
         proof=proof,
         recommended_fix=recommended_fix,
         eligibility=symbol.eligibility,
-        unsupported_constructs=symbol.body.unsupported_constructs if symbol.body else (),
+        unsupported_constructs=symbol.body.unsupported_constructs
+        if symbol.body
+        else (),
     )
     return enforce_proof_tier_policy(finding)

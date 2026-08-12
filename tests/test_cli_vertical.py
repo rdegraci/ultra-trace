@@ -62,6 +62,8 @@ def test_analyze_vertical_fixture_emits_finding(
     assert "swift.force_unwrap_risk" in rules
     high = [f for f in payload["findings"] if f["severity"] == "high"]
     assert high
-    assert all(f["proof"]["tier"] in {1, 2, 3} and f["proof"]["supported"] for f in high)
+    assert all(
+        f["proof"]["tier"] in {1, 2, 3} and f["proof"]["supported"] for f in high
+    )
     assert list((out / "report-proofs").glob("*.md"))
     assert (out / "report.md").is_file()

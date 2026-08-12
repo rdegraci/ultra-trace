@@ -55,7 +55,9 @@ def summarize_local(symbol_id: str, body: FrontendBody) -> FunctionSummary:
     statements = flatten_statements(body.statements)
     has_throw = any(s.kind == "throw_statement" for s in statements)
     has_return = any(s.kind == "return_statement" for s in statements)
-    optional_hint = bool(body.return_annotation and body.return_annotation.endswith("?"))
+    optional_hint = bool(
+        body.return_annotation and body.return_annotation.endswith("?")
+    )
     for stmt in statements:
         if stmt.kind == "return_statement" and isinstance(stmt.payload, ReturnPayload):
             if stmt.payload.result_appears_optional:

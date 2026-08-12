@@ -23,7 +23,9 @@ def sort_findings(findings: Sequence[Finding]) -> tuple[Finding, ...]:
     )
 
 
-def sort_finding_dicts(items: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
+def sort_finding_dicts(
+    items: Sequence[Mapping[str, object]],
+) -> list[dict[str, object]]:
     def key(item: Mapping[str, object]) -> tuple[object, ...]:
         loc = item.get("location")
         loc_map = loc if isinstance(loc, Mapping) else {}

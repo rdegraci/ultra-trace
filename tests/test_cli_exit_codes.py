@@ -109,9 +109,7 @@ def test_fail_on_advanced_unavailable_exit_4(
     assert result.exit_code == 4
 
 
-def test_fail_on_partial_analysis_exit_4(
-    tmp_path: Path, monkeypatch: object
-) -> None:
+def test_fail_on_partial_analysis_exit_4(tmp_path: Path, monkeypatch: object) -> None:
     _appdir(tmp_path, monkeypatch)
     payload = json.loads(
         (FIXTURES / "unsupported_macro.json").read_text(encoding="utf-8")
@@ -199,9 +197,7 @@ def test_report_rerenders_markdown(tmp_path: Path, monkeypatch: object) -> None:
     ).read_text(encoding="utf-8")
 
 
-def test_list_rules_invalid_format_exit_2(
-    tmp_path: Path, monkeypatch: object
-) -> None:
+def test_list_rules_invalid_format_exit_2(tmp_path: Path, monkeypatch: object) -> None:
     _appdir(tmp_path, monkeypatch)
     result = runner.invoke(app, ["list-rules", "--format", "xml"])
     assert result.exit_code == 2

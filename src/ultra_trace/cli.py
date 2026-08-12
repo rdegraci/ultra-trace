@@ -123,7 +123,9 @@ def analyze(
     if llm_enabled and no_llm:
         raise typer.BadParameter("--llm-enabled and --no-llm are mutually exclusive")
     if severity_threshold is not None and severity_threshold not in _SEVERITIES:
-        raise typer.BadParameter("--severity-threshold must be low|medium|high|critical")
+        raise typer.BadParameter(
+            "--severity-threshold must be low|medium|high|critical"
+        )
     if privacy_mode is not None and privacy_mode not in _PRIVACY:
         raise typer.BadParameter("--privacy-mode must be offline|redacted|full-assist")
     if provider is not None and provider not in _PROVIDERS:
@@ -247,9 +249,7 @@ def analyze(
         typer.echo(f"Wrote {written.json_path}")
     for proof_path in written.proof_paths:
         typer.echo(f"Wrote {proof_path}")
-    typer.echo(
-        f"Findings: {len(analysis.findings)} (paths={analysis.paths_explored})"
-    )
+    typer.echo(f"Findings: {len(analysis.findings)} (paths={analysis.paths_explored})")
     raise typer.Exit(
         code=exit_for_analysis(
             analysis,

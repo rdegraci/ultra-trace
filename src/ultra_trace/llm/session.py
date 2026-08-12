@@ -49,9 +49,7 @@ class LLMSession:
         if provider is not None:
             self.provider = provider
         elif self.policy.active:
-            self.provider = select_provider(
-                cfg, environ=environ, transport=transport
-            )
+            self.provider = select_provider(cfg, environ=environ, transport=transport)
         else:
             self.provider = None
 
@@ -105,9 +103,7 @@ class LLMSession:
                     advisory = request_finding_wording(
                         self.provider, findings, self.policy
                     )
-                    self._record(
-                        "remediation_wording", True, None, started, 0, 0
-                    )
+                    self._record("remediation_wording", True, None, started, 0, 0)
                     for name in (
                         "remediation_wording",
                         "reproduction_drafting",

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Sequence
@@ -9,10 +10,11 @@ from ultra_trace.cfg.models import ControlFlowGraph
 from ultra_trace.config import UltraTraceConfig
 from ultra_trace.core.findings import Finding
 from ultra_trace.discovery.scanner import RepositoryFile, default_scanner
-from ultra_trace.engine.explorer import ExplorationResult, PathExplorer
+from ultra_trace.engine.explorer import PathExplorer
 from ultra_trace.frontend.models import FrontendSymbol, FrontendUnit, flatten_symbols
 from ultra_trace.frontend.summaries import LocalUnknownSummaryProvider
 from ultra_trace.llm.models import LLMRunMetadata
+from ultra_trace.llm.network import block_network
 from ultra_trace.llm.session import LLMSession
 from ultra_trace.parser.helper import invoke_helper
 from ultra_trace.rules.pack import core_rules
@@ -78,9 +80,7 @@ def analyze_unit(
         analyzed += 1
         for rule in rules:
             findings.extend(
-                rule.evaluate(
-                    symbol=symbol, cfg=graph, exploration=explored, unit=unit
-                )
+                rule.evaluate(symbol=symbol, cfg=graph, exploration=explored, unit=unit)
             )
 
     findings.sort(
@@ -97,7 +97,9 @@ def analyze_unit(
         paths_explored=path_count,
         functions_analyzed=analyzed,
         graphs=tuple(graphs),
-        files_discovered=files_discovered if files_discovered is not None else len(unit.files),
+        files_discovered=files_discovered
+        if files_discovered is not None
+        else len(unit.files),
     )
 
 
@@ -108,6 +110,26 @@ def analyze_repository(
     files: Sequence[RepositoryFile] | None = None,
     validate_helper: bool = True,
     fail_on_parser_drift: bool = False,
+) -> AnalysisResult:
+    offline = cfg.privacy_mode == "offline"
+    ctx = block_network() if offline else nullcontext()
+    with ctx:
+        return _analyze_repository_inner(
+            repo_root,
+            cfg,
+            files=files,
+            validate_helper=validate_helper,
+            fail_on_parser_drift=fail_on_parser_drift,
+        )
+
+
+def _analyze_repository_inner(
+    repo_root: Path,
+    cfg: UltraTraceConfig,
+    *,
+    files: Sequence[RepositoryFile] | None,
+    validate_helper: bool,
+    fail_on_parser_drift: bool,
 ) -> AnalysisResult:
     scanner = default_scanner()
     discovered = (

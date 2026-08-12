@@ -59,7 +59,9 @@ class ForceUnwrapRiskRule:
 def _finding_from_event(
     symbol: FrontendSymbol, event: UnwrapEvent, path_count: int
 ) -> Finding:
-    clear = event.nilness in {"nil", "unknown"} and symbol.eligibility.state == "cfg-ready"
+    clear = (
+        event.nilness in {"nil", "unknown"} and symbol.eligibility.state == "cfg-ready"
+    )
     high = clear and symbol.eligibility.unsupported_construct_count == 0
     path_summary = (
         f"{len(event.path_node_ids)} nodes; {path_count} path(s) explored; "
@@ -104,6 +106,8 @@ def _finding_from_event(
             "Use optional binding (`guard let` / `if let`) or `??` instead of `!`."
         ),
         eligibility=symbol.eligibility,
-        unsupported_constructs=symbol.body.unsupported_constructs if symbol.body else (),
+        unsupported_constructs=symbol.body.unsupported_constructs
+        if symbol.body
+        else (),
     )
     return enforce_proof_tier_policy(finding)

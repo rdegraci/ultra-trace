@@ -60,8 +60,7 @@ def main() -> int:
         return 1
 
     print(
-        f"ok: helper_version={info.helper_version} "
-        f"toolchain={info.toolchain_version!r}"
+        f"ok: helper_version={info.helper_version} toolchain={info.toolchain_version!r}"
     )
 
     if args.fail_on_drift and pin.drift_policy != "fail":

@@ -45,9 +45,7 @@ class CFGBuilder:
 
 
 class _BuildState:
-    def __init__(
-        self, symbol_id: str, exprs: dict[str, NormalizedExpression]
-    ) -> None:
+    def __init__(self, symbol_id: str, exprs: dict[str, NormalizedExpression]) -> None:
         self.symbol_id = symbol_id
         self.exprs = exprs
         self.nodes: list[CFGNode] = []
@@ -92,9 +90,7 @@ class _BuildState:
                 return []
         return current
 
-    def emit_calls(
-        self, stmt: NormalizedStatement, preds: list[str]
-    ) -> list[str]:
+    def emit_calls(self, stmt: NormalizedStatement, preds: list[str]) -> list[str]:
         current = preds
         for call in calls_in_statement(stmt, self.exprs):
             nid = self.add(
@@ -110,9 +106,7 @@ class _BuildState:
             current = [nid]
         return current
 
-    def emit_statement(
-        self, stmt: NormalizedStatement, preds: list[str]
-    ) -> list[str]:
+    def emit_statement(self, stmt: NormalizedStatement, preds: list[str]) -> list[str]:
         if stmt.kind == "if_statement" and isinstance(stmt.payload, IfPayload):
             return self._emit_if(stmt, stmt.payload, preds)
         if stmt.kind == "guard_statement" and isinstance(stmt.payload, GuardPayload):
@@ -125,13 +119,13 @@ class _BuildState:
             return self._emit_loop(stmt, stmt.payload, preds)
         if stmt.kind == "defer_statement" and isinstance(stmt.payload, BlockPayload):
             return self.emit_statements(stmt.payload.statements, preds)
-        if stmt.kind == "do_catch_statement" and isinstance(stmt.payload, DoCatchPayload):
+        if stmt.kind == "do_catch_statement" and isinstance(
+            stmt.payload, DoCatchPayload
+        ):
             return self._emit_do_catch(stmt, stmt.payload, preds)
         if stmt.kind in {"return_statement", "throw_statement"}:
             after_calls = self.emit_calls(stmt, preds)
-            kind: CFGNodeKind = (
-                "return" if stmt.kind == "return_statement" else "throw"
-            )
+            kind: CFGNodeKind = "return" if stmt.kind == "return_statement" else "throw"
             nid = self.add(
                 kind,
                 label=stmt.kind,

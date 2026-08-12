@@ -62,9 +62,7 @@ from ultra_trace.frontend.models import (
     flatten_symbols,
 )
 
-_TYPE_KINDS = frozenset(
-    {"class", "struct", "enum", "actor", "protocol", "extension"}
-)
+_TYPE_KINDS = frozenset({"class", "struct", "enum", "actor", "protocol", "extension"})
 _ACCESSOR_KIND: dict[str, SymbolKind] = {
     "get": "property_getter",
     "set": "property_setter",
@@ -100,12 +98,18 @@ def normalize_helper_output(payload: Mapping[str, Any]) -> FrontendUnit:
     all_diags: list[FrontendDiagnostic] = []
     all_uns: list[UnsupportedConstructRecord] = []
 
-    raw_files = [
-        f for f in payload.get("files", []) if isinstance(f, Mapping)
-    ]
+    raw_files = [f for f in payload.get("files", []) if isinstance(f, Mapping)]
     raw_files = sorted(raw_files, key=lambda f: str(f.get("path", "")))
 
-    built: list[tuple[Mapping[str, Any], list[FrontendSymbol], list[FrontendDiagnostic], list[UnsupportedConstructRecord], bool]] = []
+    built: list[
+        tuple[
+            Mapping[str, Any],
+            list[FrontendSymbol],
+            list[FrontendDiagnostic],
+            list[UnsupportedConstructRecord],
+            bool,
+        ]
+    ] = []
 
     for raw in raw_files:
         path = str(raw.get("path", ""))
@@ -113,9 +117,7 @@ def normalize_helper_output(payload: Mapping[str, Any]) -> FrontendUnit:
         file_diags: list[FrontendDiagnostic] = []
         for d in raw.get("diagnostics", []):
             if isinstance(d, Mapping):
-                file_diags.append(
-                    _diagnostic(d, path, "parse", diag_counter)
-                )
+                file_diags.append(_diagnostic(d, path, "parse", diag_counter))
         symbols = _build_file_symbols(
             raw,
             path,
@@ -129,15 +131,17 @@ def normalize_helper_output(payload: Mapping[str, Any]) -> FrontendUnit:
 
     # Same-module name index for call resolution (all files in this payload).
     name_index = _callable_name_index(
-        [sym for _, symbols, _, _, _ in built for sym in flatten_symbols(tuple(symbols))]
+        [
+            sym
+            for _, symbols, _, _, _ in built
+            for sym in flatten_symbols(tuple(symbols))
+        ]
     )
 
     finalized_files: list[FrontendFile] = []
     for raw, symbols, file_diags, file_uns, parse_ok in built:
         path = str(raw.get("path", ""))
-        resolved_symbols = tuple(
-            _apply_resolution(s, name_index) for s in symbols
-        )
+        resolved_symbols = tuple(_apply_resolution(s, name_index) for s in symbols)
         attached_uns = _attach_unsupported_to_symbols(file_uns, resolved_symbols)
         eligible = tuple(
             _with_eligibility(s, parse_ok, attached_uns) for s in resolved_symbols
@@ -169,9 +173,7 @@ def normalize_helper_output(payload: Mapping[str, Any]) -> FrontendUnit:
 
     files_out = finalized_files
     symbols_by_id = {
-        s.symbol_id: s
-        for f in files_out
-        for s in flatten_symbols(f.top_level_symbols)
+        s.symbol_id: s for f in files_out for s in flatten_symbols(f.top_level_symbols)
     }
     return FrontendUnit(
         files=tuple(files_out),
@@ -247,8 +249,22 @@ def _build_file_symbols(
 ) -> list[FrontendSymbol]:
     types = [t for t in raw.get("types", []) if isinstance(t, Mapping)]
     functions = [f for f in raw.get("functions", []) if isinstance(f, Mapping)]
-    types = sorted(types, key=lambda t: (int(t.get("start_line") or 0), int(t.get("start_column") or 0), str(t.get("name", ""))))
-    functions = sorted(functions, key=lambda t: (int(t.get("start_line") or 0), int(t.get("start_column") or 0), str(t.get("name", ""))))
+    types = sorted(
+        types,
+        key=lambda t: (
+            int(t.get("start_line") or 0),
+            int(t.get("start_column") or 0),
+            str(t.get("name", "")),
+        ),
+    )
+    functions = sorted(
+        functions,
+        key=lambda t: (
+            int(t.get("start_line") or 0),
+            int(t.get("start_column") or 0),
+            str(t.get("name", "")),
+        ),
+    )
 
     type_symbols: list[FrontendSymbol] = []
     for type_raw in types:
@@ -301,7 +317,9 @@ def _build_file_symbols(
                 body=fn_sym.body,
             )
             # Rebuild symbol_id after qualified_name change for stability with qname.
-            new_id = symbol_id(path, updated.kind, updated.qualified_name, updated.location)
+            new_id = symbol_id(
+                path, updated.kind, updated.qualified_name, updated.location
+            )
             updated = FrontendSymbol(
                 symbol_id=new_id,
                 name=updated.name,
@@ -321,7 +339,11 @@ def _build_file_symbols(
         kids = tuple(
             sorted(
                 children[type_sym.symbol_id],
-                key=lambda s: (s.location.start_line, s.location.start_column, s.symbol_id),
+                key=lambda s: (
+                    s.location.start_line,
+                    s.location.start_column,
+                    s.symbol_id,
+                ),
             )
         )
         rebuilt_types.append(
@@ -338,11 +360,7 @@ def _build_file_symbols(
             )
         )
 
-    top_funcs = [
-        f
-        for f in func_symbols
-        if f.symbol_id not in nested_ids
-    ]
+    top_funcs = [f for f in func_symbols if f.symbol_id not in nested_ids]
     # Recompute nested by matching rebuilt children names/locations instead of old ids
     nested_locs = {
         (c.location.start_line, c.location.start_column, c.name)
@@ -355,11 +373,15 @@ def _build_file_symbols(
         if (f.location.start_line, f.location.start_column, f.name) not in nested_locs
     ]
     top = rebuilt_types + top_funcs
-    top.sort(key=lambda s: (s.location.start_line, s.location.start_column, s.symbol_id))
+    top.sort(
+        key=lambda s: (s.location.start_line, s.location.start_column, s.symbol_id)
+    )
     return top
 
 
-def _rebind_body_id(body: FrontendBody | None, new_symbol_id: str) -> FrontendBody | None:
+def _rebind_body_id(
+    body: FrontendBody | None, new_symbol_id: str
+) -> FrontendBody | None:
     if body is None:
         return None
     return FrontendBody(
@@ -492,7 +514,9 @@ def _normalize_statement(
     kind = _statement_kind(str(raw.get("kind", "expression")))
     loc = _span(path, raw)
     sid = statement_id(path, kind, loc, stmt_counter.next())
-    payload = _statement_payload(kind, raw, path, expr_counter, stmt_counter, expressions)
+    payload = _statement_payload(
+        kind, raw, path, expr_counter, stmt_counter, expressions
+    )
     return NormalizedStatement(
         statement_id=sid, kind=kind, location=loc, payload=payload
     )
@@ -672,7 +696,9 @@ def _statement_payload(
                         )
                     )
                 )
-        return DoCatchPayload(statements=stmts("statements"), catch_blocks=tuple(catches))
+        return DoCatchPayload(
+            statements=stmts("statements"), catch_blocks=tuple(catches)
+        )
     return ExpressionStmtPayload(expression_id=None)
 
 
@@ -743,7 +769,9 @@ def _expression_payload(
         return IdentifierPayload(name=str(raw.get("name", raw.get("text", ""))))
     if kind == "member_access":
         return MemberAccessPayload(
-            base_expression_id=_child_expr(raw, "base", path, expr_counter, expressions),
+            base_expression_id=_child_expr(
+                raw, "base", path, expr_counter, expressions
+            ),
             member=str(raw.get("member", "")),
         )
     if kind == "call":
@@ -777,7 +805,9 @@ def _expression_payload(
             if isinstance(a, Mapping)
         )
         return SubscriptPayload(
-            base_expression_id=_child_expr(raw, "base", path, expr_counter, expressions),
+            base_expression_id=_child_expr(
+                raw, "base", path, expr_counter, expressions
+            ),
             argument_expression_ids=args,
         )
     if kind == "literal":
@@ -785,8 +815,12 @@ def _expression_payload(
     if kind == "binary_operator":
         return BinaryOperatorPayload(
             operator=str(raw.get("operator", "")),
-            left_expression_id=_child_expr(raw, "left", path, expr_counter, expressions),
-            right_expression_id=_child_expr(raw, "right", path, expr_counter, expressions),
+            left_expression_id=_child_expr(
+                raw, "left", path, expr_counter, expressions
+            ),
+            right_expression_id=_child_expr(
+                raw, "right", path, expr_counter, expressions
+            ),
         )
     if kind == "unary_operator":
         return UnaryOperatorPayload(
@@ -799,7 +833,9 @@ def _expression_payload(
         if kind == "nil_coalescing":
             return BinaryOperatorPayload(
                 operator="??",
-                left_expression_id=_child_expr(raw, "left", path, expr_counter, expressions),
+                left_expression_id=_child_expr(
+                    raw, "left", path, expr_counter, expressions
+                ),
                 right_expression_id=_child_expr(
                     raw, "right", path, expr_counter, expressions
                 ),
@@ -997,7 +1033,9 @@ def _attach_unsupported_to_symbols(
                 else:
                     # Prefer the innermost (function over type).
                     other = owner.body.location if owner.body else owner.location
-                    if (loc.end_line - loc.start_line) < (other.end_line - other.start_line):
+                    if (loc.end_line - loc.start_line) < (
+                        other.end_line - other.start_line
+                    ):
                         owner = sym
         if owner is None:
             attached.append(rec)
@@ -1021,7 +1059,9 @@ def _with_eligibility(
     parse_ok: bool,
     unsupported: list[UnsupportedConstructRecord],
 ) -> FrontendSymbol:
-    children = tuple(_with_eligibility(c, parse_ok, unsupported) for c in symbol.children)
+    children = tuple(
+        _with_eligibility(c, parse_ok, unsupported) for c in symbol.children
+    )
     mine = [u for u in unsupported if u.symbol_id == symbol.symbol_id]
     has_body = symbol.body is not None
     body_valid = bool(symbol.body and symbol.body.location.is_valid())

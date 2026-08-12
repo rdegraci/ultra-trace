@@ -206,9 +206,7 @@ def extract_spike_metadata(payload: Mapping[str, Any]) -> SpikeMetadata:
         )
 
         function_names = {f.name for f in functions}
-        raw_calls = [
-            c for c in file_data.get("calls", []) if isinstance(c, Mapping)
-        ]
+        raw_calls = [c for c in file_data.get("calls", []) if isinstance(c, Mapping)]
         calls = _resolve_calls(raw_calls, function_names, path)
         for call in calls:
             call_resolution_counts[call.resolution] = (

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Mapping, Protocol
 
 from ultra_trace.llm.errors import LLMRequestError
+from ultra_trace.llm.network import ensure_network_allowed
 
 
 @dataclass(frozen=True)
@@ -33,6 +34,7 @@ class UrllibTransport:
         body: Mapping[str, object],
         timeout: float,
     ) -> HttpResult:
+        ensure_network_allowed()
         payload = json.dumps(body).encode("utf-8")
         request = urllib.request.Request(
             url,

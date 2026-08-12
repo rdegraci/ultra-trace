@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 def _template_text(name: str) -> str:
-    return resources.files("ultra_trace.data").joinpath(name).read_text(encoding="utf-8")
+    return (
+        resources.files("ultra_trace.data").joinpath(name).read_text(encoding="utf-8")
+    )
 
 
 def ensure_user_appdir() -> Path:

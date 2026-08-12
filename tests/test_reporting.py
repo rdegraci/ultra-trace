@@ -70,9 +70,7 @@ def test_proof_output_golden(tmp_path: Path) -> None:
 
 def test_eligibility_section_golden() -> None:
     result = analyze_unit(_unit("unsupported_macro.json"), max_depth=12)
-    payload = report_json(
-        result, repo_root=Path("."), generated_at=STAMP
-    )
+    payload = report_json(result, repo_root=Path("."), generated_at=STAMP)
     frontend = payload["analysis"]["frontend"]
     expected = json.loads(
         (GOLDENS / "eligibility_macro.json").read_text(encoding="utf-8")

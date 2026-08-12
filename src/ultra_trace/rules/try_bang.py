@@ -44,7 +44,9 @@ class TryBangRiskRule:
 
 def _finding(symbol: FrontendSymbol, event: TryBangEvent, path_count: int) -> Finding:
     clear = event.may_throw is True
-    high = allow_high(symbol.eligibility) and (clear or event.resolved_callee_symbol_id is None)
+    high = allow_high(symbol.eligibility) and (
+        clear or event.resolved_callee_symbol_id is None
+    )
     path_summary = (
         f"{len(event.path_node_ids)} nodes; {path_count} path(s); "
         f"try! `{event.callee_text or 'call'}`"

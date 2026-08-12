@@ -48,8 +48,7 @@ def _finding(symbol: FrontendSymbol, event: SubscriptEvent, path_count: int) -> 
     index = event.index_name or event.index_const or "index"
     base = event.base_name or "collection"
     path_summary = (
-        f"{len(event.path_node_ids)} nodes; {path_count} path(s); "
-        f"{base}[{index}]"
+        f"{len(event.path_node_ids)} nodes; {path_count} path(s); {base}[{index}]"
     )
     proof = repro_proof(
         trigger=(

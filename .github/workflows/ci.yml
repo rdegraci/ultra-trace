@@ -1,0 +1,89 @@
+# Ultra-Trace MVP CI
+# - Linux: pytest, mypy, ruff (no Swift helper)
+# - macOS 15 + Xcode: build helper, fail on toolchain drift, full pytest, e2e
+# Nightly defaults: Core only, privacyMode offline, LLM off
+#   (see examples/ultra-trace.yml). Do not default --fail-on-partial-analysis.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    name: pytest + mypy + ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Install package
+        run: pip install -e ".[dev]"
+
+      - name: Ruff lint
+        run: ruff check src tests scripts
+
+      - name: Ruff format
+        run: ruff format --check src tests scripts
+
+      - name: Mypy
+        run: mypy
+
+      - name: Pytest
+        run: pytest -q
+
+  macos-swift:
+    name: macOS helper + pin + e2e
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          swift --version
+          xcodebuild -version
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package
+        run: pip install -e ".[dev]"
+
+      - name: Build swift-parser-helper
+        run: ./scripts/build_parser_helper.sh
+
+      - name: Validate toolchain pin (fail on drift)
+        run: python scripts/validate_parser_toolchain.py --fail-on-drift
+
+      - name: Ruff lint
+        run: ruff check src tests scripts
+
+      - name: Ruff format
+        run: ruff format --check src tests scripts
+
+      - name: Mypy
+        run: mypy
+
+      - name: Pytest
+        run: pytest -q
+
+      - name: Fixture spike metrics
+        run: |
+          mkdir -p docs/cache/spikes/results
+          python scripts/run_parser_spike.py \
+            --output docs/cache/spikes/results/fixtures-ci.json
+
+      - name: E2E analyze representative fixtures (offline, Core, LLM off)
+        run: ./scripts/ci_analyze_samples.sh

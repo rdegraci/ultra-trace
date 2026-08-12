@@ -4,12 +4,11 @@ import json
 from pathlib import Path
 
 from ultra_trace.cfg import CFGBuilder
-from ultra_trace.core.findings import enforce_proof_tier_policy
-from ultra_trace.core.findings import Finding, ProofArtifact
+from ultra_trace.core.findings import Finding, ProofArtifact, enforce_proof_tier_policy
 from ultra_trace.engine.pipeline import analyze_unit
 from ultra_trace.frontend.eligibility import make_eligibility
 from ultra_trace.frontend.models import SourceSpan
-from ultra_trace.reporting.writers import finding_to_json, report_json
+from ultra_trace.reporting.json_report import finding_to_json, report_json
 from ultra_trace.swift_frontend import normalize_helper_output
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "helper"

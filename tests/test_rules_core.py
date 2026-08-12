@@ -6,9 +6,9 @@ from pathlib import Path
 from ultra_trace.core.findings import Finding, ProofArtifact, enforce_proof_tier_policy
 from ultra_trace.engine.pipeline import analyze_unit
 from ultra_trace.frontend.eligibility import make_eligibility
-from ultra_trace.frontend.models import SourceSpan
+from ultra_trace.frontend.models import SourceSpan, flatten_symbols
 from ultra_trace.rules import DECLARED_RULES, IMPLEMENTED_RULES, core_rules
-from ultra_trace.rules.coverage import apply_coverage
+from ultra_trace.rules.coverage import allow_high, apply_coverage
 from ultra_trace.swift_frontend import normalize_helper_output
 from ultra_trace.taint.catalog import TaintCatalog
 
@@ -106,6 +106,23 @@ def test_high_findings_have_supported_proof_tiers() -> None:
             if finding.severity in {"high", "critical"}:
                 assert finding.proof.supported
                 assert finding.proof.tier in {1, 2, 3}
+
+
+def test_unsupported_constructs_do_not_overstate_confidence() -> None:
+    result = _analyze("unsupported_macro.json")
+    assert result.unit.unsupported_constructs
+    symbols = [
+        s for file in result.unit.files for s in flatten_symbols(file.top_level_symbols)
+    ]
+    assert any(s.eligibility.state == "partially-analyzed" for s in symbols)
+    for finding in result.findings:
+        assert finding.severity not in {"high", "critical"}
+        assert finding.confidence != "high"
+    demo_elig = next(s.eligibility for s in symbols if s.name == "demo")
+    assert not allow_high(demo_elig)
+    confidence, severity = apply_coverage("high", "high", demo_elig)
+    assert confidence == "low"
+    assert severity == "medium"
 
 
 def test_coverage_degrades_high_on_partial() -> None:

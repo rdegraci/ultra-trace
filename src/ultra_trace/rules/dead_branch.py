@@ -35,8 +35,7 @@ class DeadBranchCandidateRule:
                 by_key[key] = event
 
         findings = [
-            _finding(symbol, event, exploration.path_count)
-            for event in by_key.values()
+            _finding(symbol, event, exploration.path_count) for event in by_key.values()
         ]
         findings.sort(key=lambda f: (f.location.file_path, f.location.start_line, f.id))
         return findings

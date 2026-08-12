@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,6 +17,21 @@ DEFAULT_EXCLUDES: tuple[str, ...] = (
     "Carthage",
     "SourcePackages",
 )
+
+
+def path_is_excluded(relative_path: str, excludes: Sequence[str]) -> bool:
+    """True when *relative_path* matches a default or configured exclude token."""
+    rel = relative_path.replace("\\", "/").lstrip("./")
+    parts = rel.split("/")
+    for raw in excludes:
+        token = raw.strip().replace("\\", "/").strip("/")
+        if not token:
+            continue
+        if rel == token or rel.startswith(token + "/"):
+            return True
+        if token in parts:
+            return True
+    return False
 
 
 @dataclass(frozen=True)
@@ -55,6 +71,9 @@ class RipgrepRepositoryScanner:
             for p in paths
             if p.suffix == ".swift" and p.is_file()
         ]
+        files = [
+            item for item in files if not path_is_excluded(item.relative_path, excludes)
+        ]
         files.sort(key=lambda f: f.relative_path)
         return files
 
@@ -71,7 +90,13 @@ class RipgrepRepositoryScanner:
             )
         except Exception as exc:  # noqa: BLE001 — fall back intentionally
             logger.debug("python-ripgrep unavailable or failed (%s); using rg CLI", exc)
+        try:
             return self._search_rg_cli(
+                root, include_paths=include_paths, exclude_paths=exclude_paths
+            )
+        except FileNotFoundError as exc:
+            logger.debug("rg CLI unavailable (%s); walking filesystem", exc)
+            return self._search_walk(
                 root, include_paths=include_paths, exclude_paths=exclude_paths
             )
 
@@ -86,9 +111,7 @@ class RipgrepRepositoryScanner:
         # discovery behind this method so Slice 1 stays unblocked.
         import ripgrep  # type: ignore[import-not-found]
 
-        search_roots = (
-            [root / p for p in include_paths] if include_paths else [root]
-        )
+        search_roots = [root / p for p in include_paths] if include_paths else [root]
         found: set[Path] = set()
         for search_root in search_roots:
             if not search_root.exists():
@@ -150,6 +173,41 @@ class RipgrepRepositoryScanner:
                 path = (root / path).resolve()
             paths.append(path)
         return paths
+
+    def _search_walk(
+        self,
+        root: Path,
+        *,
+        include_paths: Sequence[str],
+        exclude_paths: Sequence[str],
+    ) -> list[Path]:
+        search_roots = [root / p for p in include_paths] if include_paths else [root]
+        found: list[Path] = []
+        for search_root in search_roots:
+            if not search_root.exists():
+                continue
+            if search_root.is_file():
+                if search_root.suffix == ".swift":
+                    found.append(search_root.resolve())
+                continue
+            for dirpath, dirnames, filenames in os.walk(search_root):
+                current = Path(dirpath)
+                try:
+                    rel_dir = current.relative_to(root).as_posix()
+                except ValueError:
+                    rel_dir = current.name
+                dirnames[:] = [
+                    name
+                    for name in dirnames
+                    if not path_is_excluded(
+                        f"{rel_dir}/{name}" if rel_dir != "." else name,
+                        exclude_paths,
+                    )
+                ]
+                for name in filenames:
+                    if name.endswith(".swift"):
+                        found.append((current / name).resolve())
+        return found
 
 
 def default_scanner() -> RipgrepRepositoryScanner:

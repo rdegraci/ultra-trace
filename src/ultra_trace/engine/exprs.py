@@ -16,9 +16,7 @@ from ultra_trace.frontend.models import (
 )
 
 
-def expr_text(
-    expr_id: str | None, exprs: dict[str, NormalizedExpression]
-) -> str:
+def expr_text(expr_id: str | None, exprs: dict[str, NormalizedExpression]) -> str:
     if not expr_id or expr_id not in exprs:
         return ""
     expr = exprs[expr_id]
@@ -43,7 +41,9 @@ def expr_text(
     if isinstance(payload, ForcedCastPayload):
         return f"{expr_text(payload.operand_expression_id, exprs)} as! {payload.type_name or '?'}"
     if isinstance(payload, TryPayload):
-        return f"{payload.style} {expr_text(payload.operand_expression_id, exprs)}".strip()
+        return (
+            f"{payload.style} {expr_text(payload.operand_expression_id, exprs)}".strip()
+        )
     if isinstance(payload, WrapperPayload):
         return expr_text(payload.operand_expression_id, exprs)
     if isinstance(payload, SubscriptPayload):

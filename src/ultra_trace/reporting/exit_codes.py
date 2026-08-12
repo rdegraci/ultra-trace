@@ -1,3 +1,16 @@
+"""CLI-SPEC exit policy for analyze (0–4).
+
+0  completed; no finding at or above ``severity_threshold``
+1  completed; at least one finding meets the threshold
+2  configuration or invocation error
+3  unexpected internal analyzer failure
+4  frontend health policy failed (parser drift, ``--fail-on-partial-analysis``,
+   or Advanced requested with ``--fail-on-advanced-unavailable``)
+
+Health codes (2–4) win over the findings code. ``--fail-on-partial-analysis``
+is off by default so unsupported Swift does not fail CI.
+"""
+
 from __future__ import annotations
 
 from typing import Sequence
@@ -15,9 +28,7 @@ EXIT_FRONTEND = 4
 _SEV_RANK = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 
 
-def findings_meet_threshold(
-    findings: Sequence[Finding], threshold: str
-) -> bool:
+def findings_meet_threshold(findings: Sequence[Finding], threshold: str) -> bool:
     floor = _SEV_RANK.get(threshold, 1)
     return any(_SEV_RANK.get(f.severity, 0) >= floor for f in findings)
 

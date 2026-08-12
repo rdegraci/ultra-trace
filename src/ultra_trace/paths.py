@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-
 APP_DIR_NAME = "ultra-trace"
 APP_DIR_ENV = "ULTRA_TRACE_APP_DIR"
 

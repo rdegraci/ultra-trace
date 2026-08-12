@@ -8,7 +8,7 @@ from typing import Sequence
 from ultra_trace.config import OutputFormat
 from ultra_trace.engine.pipeline import AnalysisResult
 from ultra_trace.proofs.generator import write_proof_file
-from ultra_trace.reporting.json_report import finding_to_json, report_json
+from ultra_trace.reporting.json_report import report_json
 from ultra_trace.reporting.markdown import markdown_from_payload
 from ultra_trace.reporting.ordering import sort_findings
 from ultra_trace.swift_frontend import normalize_helper_output

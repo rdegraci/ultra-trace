@@ -56,8 +56,7 @@ def markdown_from_payload(payload: Mapping[str, Any]) -> str:
         ),
         (
             "- Unsupported constructs: "
-            f"total={uns.get('total', 0)}"
-            + _kind_suffix(_map(uns.get("by_kind")))
+            f"total={uns.get('total', 0)}" + _kind_suffix(_map(uns.get("by_kind")))
         ),
         (
             "- Call resolution: "
@@ -175,9 +174,7 @@ def markdown_from_payload(payload: Mapping[str, Any]) -> str:
             advisory_blocks.append(str(finding.get("id")))
     llm_meta = _map(analysis.get("llm"))
     report_summary = llm_meta.get("report_summary")
-    if advisory_blocks or (
-        isinstance(report_summary, str) and report_summary.strip()
-    ):
+    if advisory_blocks or (isinstance(report_summary, str) and report_summary.strip()):
         lines.extend(
             [
                 "## Advisory",

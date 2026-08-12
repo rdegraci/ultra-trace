@@ -1,0 +1,50 @@
+# Sample project / nightly CI config (MVP defaults).
+# Copy to the repo root as ultra-trace.yml or pass --config.
+#
+# Defaults: Core only, privacyMode offline, LLM off.
+# Do not set --fail-on-partial-analysis in nightly CI (unsupported Swift
+# should surface in the report, not fail the job).
+#
+# Swift helper CI must run on macOS + Xcode. Pin/drift:
+#   python scripts/validate_parser_toolchain.py --fail-on-drift
+
+analysisModes:
+  - core
+
+privacyMode: offline
+
+llm:
+  enabled: false
+
+severityThreshold: medium
+proofMode: mixed
+maxDepth: 12
+
+outputFormats:
+  - markdown
+  - json
+
+includePaths: []
+excludePaths:
+  - .git
+  - DerivedData
+  - .build
+  - Pods
+  - Carthage
+  - SourcePackages
+
+focusModules: []
+
+swiftFrontend:
+  helperPath: null
+  parserVersion: null
+  toolchainPath: null
+  supportedSubsetMode: core
+  helperTimeoutSeconds: 120
+
+advanced:
+  enabled: false
+
+callSummary:
+  enabled: false
+  maxDepth: 0

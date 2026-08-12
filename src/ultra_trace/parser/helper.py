@@ -148,7 +148,9 @@ def query_helper_version(
         schema_version=str(raw.get("schema_version", "")),
         swift_syntax_version=str(raw.get("swift_syntax_version", "")),
         toolchain_name=(
-            str(raw["toolchain_name"]) if raw.get("toolchain_name") is not None else None
+            str(raw["toolchain_name"])
+            if raw.get("toolchain_name") is not None
+            else None
         ),
         toolchain_version=(
             str(raw["toolchain_version"])
@@ -181,9 +183,7 @@ def validate_helper(
     problems: list[str] = []
 
     if info.helper_name and info.helper_name != pin.helper_name:
-        problems.append(
-            f"helper_name {info.helper_name!r} != pin {pin.helper_name!r}"
-        )
+        problems.append(f"helper_name {info.helper_name!r} != pin {pin.helper_name!r}")
     if info.helper_version != pin.helper_version:
         problems.append(
             f"helper_version {info.helper_version!r} != pin {pin.helper_version!r}"
@@ -313,9 +313,7 @@ def invoke_helper(
         raise HelperInvocationError("helper JSON must be an object")
 
     if returncode == 1:
-        logger.warning(
-            "Helper reported per-file errors (%s)", payload.get("errors")
-        )
+        logger.warning("Helper reported per-file errors (%s)", payload.get("errors"))
 
     return HelperResult(
         payload=payload,

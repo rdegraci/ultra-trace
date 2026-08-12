@@ -150,7 +150,6 @@ def evaluate_condition(
             return "true"
         if text == "false":
             return "false"
-        name = ident_name(None, {})  # unused; check facts via raw text
         if text in state.facts:
             fact = state.facts[text]
             if fact in {"true", "false"}:
@@ -168,9 +167,7 @@ def apply_condition_facts(
     """Apply path-sensitive facts for a taken/false branch label."""
     by_id = dict(exprs)
     text = expr_text(expr_id, by_id)
-    positive = taken in {"true", "seq"} or (
-        taken != "false" and taken != "back"
-    )
+    positive = taken in {"true", "seq"} or (taken != "false" and taken != "back")
     if not expr_id or expr_id not in exprs:
         bind = _let_name(text)
         if bind and positive:
@@ -279,13 +276,13 @@ def subscript_safety(
         return None, None, None, False, False, False
     payload = expr.payload
     base_name = ident_name(payload.base_expression_id, by_id)
-    index_id = payload.argument_expression_ids[0] if payload.argument_expression_ids else None
+    index_id = (
+        payload.argument_expression_ids[0] if payload.argument_expression_ids else None
+    )
     index_name = ident_name(index_id, by_id)
     index_const = eval_const(index_id, exprs, state)
     guarded = bool(
-        base_name
-        and index_name
-        and (index_name, base_name) in state.bounds_ok
+        base_name and index_name and (index_name, base_name) in state.bounds_ok
     )
     constant_safe = False
     known_oob = False
@@ -311,7 +308,10 @@ def array_literal_size(
     if not expr_id or expr_id not in exprs:
         return None
     payload = exprs[expr_id].payload
-    if isinstance(payload, CollectionPayload) and exprs[expr_id].kind == "array_literal":
+    if (
+        isinstance(payload, CollectionPayload)
+        and exprs[expr_id].kind == "array_literal"
+    ):
         return len(payload.element_expression_ids)
     return None
 

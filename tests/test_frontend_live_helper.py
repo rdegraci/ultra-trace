@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 
 from ultra_trace.frontend import CallPayload, flatten_symbols
-from ultra_trace.parser.helper import HelperNotFoundError, discover_helper, invoke_helper
+from ultra_trace.parser.helper import (
+    HelperNotFoundError,
+    discover_helper,
+    invoke_helper,
+)
 from ultra_trace.swift_frontend import normalize_helper_output
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

@@ -7,14 +7,19 @@ from typer.testing import CliRunner
 
 from ultra_trace.cli import app
 from ultra_trace.config import LLMConfig, UltraTraceConfig, apply_cli_overrides
-from ultra_trace.engine.pipeline import analyze_unit
+from ultra_trace.core.findings import Finding, ProofArtifact
+from ultra_trace.engine.pipeline import analyze_repository, analyze_unit
+from ultra_trace.frontend.eligibility import make_eligibility
+from ultra_trace.frontend.models import SourceSpan
+from ultra_trace.llm.advisory import finding_briefs
 from ultra_trace.llm.anthropic import AnthropicProvider
 from ultra_trace.llm.credentials import validate_llm_config
 from ultra_trace.llm.errors import LLMConfigError, LLMRequestError
 from ultra_trace.llm.factory import select_provider
 from ultra_trace.llm.features import ALLOWED_FEATURES
-from ultra_trace.llm.http import HttpResult
+from ultra_trace.llm.http import HttpResult, UrllibTransport
 from ultra_trace.llm.models import LLMRequest, LLMResponse
+from ultra_trace.llm.network import NetworkBlockedError, block_network
 from ultra_trace.llm.openai import OpenAIProvider
 from ultra_trace.llm.planning import clamp_plan, default_plan, parse_plan_text
 from ultra_trace.llm.privacy import (
@@ -195,9 +200,7 @@ def test_llm_focus_cannot_hide_unrestricted_scan() -> None:
 
 def test_planning_fallback_on_failure() -> None:
     cfg = _assist_cfg()
-    session = LLMSession(
-        cfg, provider=FakeProvider(error=LLMRequestError("boom"))
-    )
+    session = LLMSession(cfg, provider=FakeProvider(error=LLMRequestError("boom")))
     plan = session.resolve_plan()
     assert plan.plan_id == "default-fallback"
     assert session.fallback_reason == "LLMRequestError"
@@ -218,9 +221,7 @@ def test_advisory_failure_does_not_change_findings() -> None:
     result = analyze_unit(normalize_helper_output(payload), max_depth=12)
     before = result.findings
     cfg = _assist_cfg()
-    session = LLMSession(
-        cfg, provider=FakeProvider(error=LLMRequestError("nope"))
-    )
+    session = LLMSession(cfg, provider=FakeProvider(error=LLMRequestError("nope")))
     plan = default_plan(cfg)
     meta = session.metadata_after(plan, result.findings)
     assert result.findings == before
@@ -240,9 +241,7 @@ def test_successful_plan_does_not_invent_findings() -> None:
         "parser_metadata": {"parser_name": "swift-parser-helper"},
         "files": [],
     }
-    result = analyze_unit(
-        normalize_helper_output(payload), max_depth=plan.max_depth
-    )
+    result = analyze_unit(normalize_helper_output(payload), max_depth=plan.max_depth)
     assert result.findings == ()
     meta = session.metadata_after(plan, result.findings)
     assert meta.planning_used is True
@@ -257,11 +256,86 @@ def test_redacted_mode_strips_secrets_and_long_lines() -> None:
     assert "sk-abcdefghijklmnopqrstuvwxyz123456" not in cleaned
 
 
+def _sample_finding() -> Finding:
+    return Finding(
+        id="swift.force_unwrap_risk:Auth.swift:10:1",
+        rule_id="swift.force_unwrap_risk",
+        title="Force unwrap",
+        severity="high",
+        confidence="high",
+        location=SourceSpan("Auth.swift", 10, 1, 10, 8),
+        symbol_name="configure",
+        symbol_id="sym:configure",
+        bug_type="crash",
+        description="token! may be nil; api_key=sk-abcdefghijklmnopqrstuvwxyz123456",
+        risk="crash",
+        path_summary="entry -> unwrap",
+        proof=ProofArtifact(
+            tier=2,
+            kind="repro",
+            supported=True,
+            trigger_condition="t",
+            expected_behavior="e",
+            assumptions=(),
+            content="c",
+        ),
+        recommended_fix="Use guard let token else { return }",
+        eligibility=make_eligibility("cfg-ready"),
+        unsupported_constructs=(),
+    )
+
+
+def test_redacted_finding_briefs_omit_source_and_secrets() -> None:
+    finding = _sample_finding()
+    redacted = finding_briefs([finding], "redacted")
+    assert "description" not in redacted
+    assert "recommended_fix" not in redacted
+    assert finding.description not in redacted
+    assert finding.recommended_fix not in redacted
+    assert "sk-" not in redacted
+    full = finding_briefs([finding], "full-assist")
+    assert "Use guard let token" in full
+    assert "sk-" not in full
+
+
+def test_offline_blocks_http_transport() -> None:
+    transport = UrllibTransport()
+    with block_network():
+        with pytest.raises(NetworkBlockedError, match="offline"):
+            transport.post_json(
+                "https://example.test/v1",
+                {},
+                {"ping": True},
+                timeout=1.0,
+            )
+
+
+def test_offline_analyze_does_not_call_urlopen(
+    tmp_path: Path, monkeypatch: object
+) -> None:
+    def _boom(*args: object, **kwargs: object) -> object:
+        raise AssertionError("urlopen must not run in offline mode")
+
+    monkeypatch.setattr("urllib.request.urlopen", _boom)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    result = analyze_repository(
+        repo,
+        UltraTraceConfig(
+            privacy_mode="offline",
+            llm=LLMConfig(enabled=True, model="should-not-call"),
+        ),
+        validate_helper=False,
+    )
+    assert result.findings == ()
+    assert result.llm is not None
+    assert result.llm.enabled is False
+    assert result.llm.invocation_count == 0
+
+
 def test_env_fills_empty_model() -> None:
     cfg = UltraTraceConfig(llm=LLMConfig(enabled=False, model=""))
-    filled = apply_env_llm_overrides(
-        cfg, {"ULTRA_TRACE_LLM_MODEL": "from-env"}
-    )
+    filled = apply_env_llm_overrides(cfg, {"ULTRA_TRACE_LLM_MODEL": "from-env"})
     assert filled.llm.model == "from-env"
 
 

@@ -1,7 +1,11 @@
 """Normalized frontend contract. Downstream must not import parser types."""
 
 from ultra_trace.frontend.call_index import build_call_site_index, index_from_records
-from ultra_trace.frontend.eligibility import classify_file, classify_symbol, make_eligibility
+from ultra_trace.frontend.eligibility import (
+    classify_file,
+    classify_symbol,
+    make_eligibility,
+)
 from ultra_trace.frontend.models import (
     AssignmentPayload,
     BinaryOperatorPayload,

@@ -47,7 +47,9 @@ def finding_briefs(
     return sanitize_for_mode(json.dumps(rows, sort_keys=True), privacy_mode)
 
 
-def parse_advisory_items(text: str, valid_ids: set[str]) -> dict[str, tuple[AdvisoryItem, ...]]:
+def parse_advisory_items(
+    text: str, valid_ids: set[str]
+) -> dict[str, tuple[AdvisoryItem, ...]]:
     blob = text.strip()
     fenced = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", blob, re.DOTALL)
     if fenced:
@@ -110,10 +112,7 @@ def request_report_summary(
 ) -> str | None:
     if not feature_enabled(policy.features, "report_summary"):
         return None
-    user = (
-        f"Finding count={len(findings)}. "
-        f"Rules={[f.rule_id for f in findings[:12]]}."
-    )
+    user = f"Finding count={len(findings)}. Rules={[f.rule_id for f in findings[:12]]}."
     response = provider.complete(
         LLMRequest(
             feature="report_summary",

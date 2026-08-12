@@ -84,9 +84,7 @@ def statement_root_expression_ids(stmt: NormalizedStatement) -> tuple[str, ...]:
         return (payload.initializer_expression_id,)
     if isinstance(payload, AssignmentPayload):
         ids = [
-            i
-            for i in (payload.target_expression_id, payload.value_expression_id)
-            if i
+            i for i in (payload.target_expression_id, payload.value_expression_id) if i
         ]
         return tuple(ids)
     if isinstance(payload, ExpressionStmtPayload) and payload.expression_id:

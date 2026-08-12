@@ -44,7 +44,9 @@ def finding_to_json(
         advisory: dict[str, object] = {
             "llm_used": True,
             "provider": advisory_provider,
-            "content": [{"kind": item.kind, "text": item.text} for item in advisory_items],
+            "content": [
+                {"kind": item.kind, "text": item.text} for item in advisory_items
+            ],
         }
     else:
         advisory = {"llm_used": False, "provider": None, "content": []}
@@ -114,7 +116,9 @@ def _recommendations_for(findings: Sequence[Finding]) -> list[dict[str, object]]
         if text and text not in seen:
             seen.add(text)
             texts.append(("finding", text))
-    return sort_recommendations([{"scope": scope, "text": text} for scope, text in texts])
+    return sort_recommendations(
+        [{"scope": scope, "text": text} for scope, text in texts]
+    )
 
 
 def _warnings_for(result: AnalysisResult) -> list[dict[str, object]]:

@@ -3,7 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ultra_trace.cfg.models import CFGNode, ControlFlowGraph
-from ultra_trace.cfg.walk import expressions_by_id, unwraps_in_statement, walk_expressions
+from ultra_trace.cfg.walk import (
+    expressions_by_id,
+    unwraps_in_statement,
+    walk_expressions,
+)
 from ultra_trace.engine.exprs import expr_text, ident_name
 from ultra_trace.engine.facts import (
     apply_condition_facts,
@@ -308,7 +312,9 @@ class PathExplorer:
                     acc.try_bangs.append(
                         _try_bang_event(expr, exprs, trail, self.summaries)
                     )
-            if expr.kind == "forced_cast" and isinstance(expr.payload, ForcedCastPayload):
+            if expr.kind == "forced_cast" and isinstance(
+                expr.payload, ForcedCastPayload
+            ):
                 name = ident_name(expr.payload.operand_expression_id, exprs)
                 acc.forced_casts.append(
                     ForcedCastEvent(
@@ -442,7 +448,10 @@ def _unwrap_operand(
     exprs: dict[str, NormalizedExpression],
     state: SymbolicState,
 ) -> tuple[str | None, Nilness]:
-    if isinstance(unwrap.payload, WrapperPayload) and unwrap.payload.operand_expression_id:
+    if (
+        isinstance(unwrap.payload, WrapperPayload)
+        and unwrap.payload.operand_expression_id
+    ):
         operand = exprs.get(unwrap.payload.operand_expression_id)
         if operand and isinstance(operand.payload, IdentifierPayload):
             return operand.payload.name, state.get(operand.payload.name)

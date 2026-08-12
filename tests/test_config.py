@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ultra_trace.config import UltraTraceConfig, apply_cli_overrides, load_layered_config
+from ultra_trace.config import (
+    UltraTraceConfig,
+    apply_cli_overrides,
+    load_layered_config,
+)
 from ultra_trace.paths import APP_DIR_ENV
 
 
@@ -25,9 +29,7 @@ def test_merge_and_cli_precedence(tmp_path: Path, monkeypatch: object) -> None:
     assert cfg2.max_depth == 12
     assert cfg2.llm.enabled is False
 
-    enabled = apply_cli_overrides(
-        cfg, llm_enabled=True, privacy_mode="offline"
-    )
+    enabled = apply_cli_overrides(cfg, llm_enabled=True, privacy_mode="offline")
     assert enabled.privacy_mode == "offline"
     assert enabled.llm.enabled is False
 
