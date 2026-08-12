@@ -37,6 +37,10 @@ pytest -q tests/test_parser_helper.py
 - Toolchain pin: [`toolchain-pins/parser-helper.json`](toolchain-pins/parser-helper.json) (`drift_policy: fail`)
 - Corpus spike how-to: [`docs/cache/spikes/PARSER-CORPUS-SPIKE.md`](docs/cache/spikes/PARSER-CORPUS-SPIKE.md)
 
+## Frontend normalization (Slice 3)
+
+Downstream modules import `ultra_trace.frontend` only (not `ultra_trace.parser`). Map helper JSON with `ultra_trace.swift_frontend.normalize_helper_output`.
+
 ## License
 Copyright 2026 Rodney Degracia
 

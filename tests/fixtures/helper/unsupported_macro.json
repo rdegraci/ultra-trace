@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0",
+  "helper_version": "0.1.0",
+  "parser_metadata": {
+    "parser_name": "swift-parser-helper",
+    "parser_version": "0.1.0",
+    "invocation_mode": "subprocess-json",
+    "supports_recovery": false
+  },
+  "files": [
+    {
+      "path": "fixtures/swift/unsupported/macro_expansion.swift",
+      "parse_ok": true,
+      "line_count": 7,
+      "types": [],
+      "functions": [
+        {
+          "kind": "function",
+          "name": "demo",
+          "parent_type": null,
+          "start_line": 4,
+          "start_column": 1,
+          "end_line": 6,
+          "end_column": 2,
+          "body_start_line": 4,
+          "body_start_column": 13,
+          "body_end_line": 6,
+          "body_end_column": 2,
+          "return_annotation": null,
+          "parameters": [],
+          "statements": [
+            {
+              "kind": "expression",
+              "start_line": 5,
+              "start_column": 5,
+              "end_line": 5,
+              "end_column": 36,
+              "expression": {
+                "kind": "unknown",
+                "text": "#warning(\"macro expansion fixture\")",
+                "start_line": 5,
+                "start_column": 5,
+                "end_line": 5,
+                "end_column": 36
+              }
+            }
+          ]
+        }
+      ],
+      "unsupported": [
+        {
+          "category": "macro",
+          "detail": "#warning",
+          "start_line": 5,
+          "start_column": 5,
+          "end_line": 5,
+          "end_column": 36
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": [],
+  "errors": []
+}

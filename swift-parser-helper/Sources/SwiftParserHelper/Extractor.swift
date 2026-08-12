@@ -55,11 +55,19 @@ final class SpikeExtractor: SyntaxVisitor {
         kind: String,
         name: String,
         node: some SyntaxProtocol,
-        body: CodeBlockSyntax?
+        body: CodeBlockSyntax?,
+        parameters: [[String: Any]] = [],
+        returnAnnotation: String? = nil
     ) {
         var item = span(of: node).asDict()
         item["kind"] = kind
         item["name"] = name
+        item["parameters"] = parameters
+        if let returnAnnotation {
+            item["return_annotation"] = returnAnnotation
+        } else {
+            item["return_annotation"] = NSNull()
+        }
         if let parent = typeStack.last {
             item["parent_type"] = parent
         } else {
@@ -71,11 +79,13 @@ final class SpikeExtractor: SyntaxVisitor {
             item["body_start_column"] = bodySpan.startColumn
             item["body_end_line"] = bodySpan.endLine
             item["body_end_column"] = bodySpan.endColumn
+            item["statements"] = SyntaxEncoding.encodeCodeBlock(body, converter: converter)
         } else {
             item["body_start_line"] = NSNull()
             item["body_start_column"] = NSNull()
             item["body_end_line"] = NSNull()
             item["body_end_column"] = NSNull()
+            item["statements"] = [] as [Any]
         }
         functions.append(item)
     }
@@ -168,17 +178,37 @@ final class SpikeExtractor: SyntaxVisitor {
     // MARK: - Functions
 
     override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
-        recordFunction(kind: "function", name: node.name.text, node: node, body: node.body)
+        recordFunction(
+            kind: "function",
+            name: node.name.text,
+            node: node,
+            body: node.body,
+            parameters: SyntaxEncoding.encodeParameters(
+                node.signature.parameterClause,
+                converter: converter
+            ),
+            returnAnnotation: node.signature.returnClause?.type.trimmedDescription
+        )
         return .visitChildren
     }
 
     override func visit(_ node: InitializerDeclSyntax) -> SyntaxVisitorContinueKind {
-        recordFunction(kind: "initializer", name: "init", node: node, body: node.body)
+        recordFunction(
+            kind: "initializer",
+            name: "init",
+            node: node,
+            body: node.body,
+            parameters: SyntaxEncoding.encodeParameters(
+                node.signature.parameterClause,
+                converter: converter
+            ),
+            returnAnnotation: nil
+        )
         return .visitChildren
     }
 
     override func visit(_ node: DeinitializerDeclSyntax) -> SyntaxVisitorContinueKind {
-        recordFunction(kind: "deinitializer", name: "deinit", node: node, body: node.body)
+        recordFunction(kind: "function", name: "deinit", node: node, body: node.body)
         return .visitChildren
     }
 

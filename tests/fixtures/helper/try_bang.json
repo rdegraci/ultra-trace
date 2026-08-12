@@ -1,0 +1,182 @@
+{
+  "schema_version": "1.0",
+  "helper_version": "0.1.0",
+  "parser_metadata": {
+    "parser_name": "swift-parser-helper",
+    "parser_version": "0.1.0",
+    "swift_syntax_version": "602.0.0",
+    "toolchain_name": "Apple Swift",
+    "toolchain_version": "Apple Swift version 6.2.3",
+    "invocation_mode": "subprocess-json",
+    "supports_recovery": false
+  },
+  "files": [
+    {
+      "path": "fixtures/swift/supported/try_bang.swift",
+      "parse_ok": true,
+      "line_count": 13,
+      "types": [
+        {
+          "kind": "enum",
+          "name": "Boom",
+          "start_line": 1,
+          "start_column": 1,
+          "end_line": 3,
+          "end_column": 2
+        }
+      ],
+      "functions": [
+        {
+          "kind": "function",
+          "name": "mayFail",
+          "parent_type": null,
+          "start_line": 5,
+          "start_column": 1,
+          "end_line": 8,
+          "end_column": 2,
+          "body_start_line": 5,
+          "body_start_column": 40,
+          "body_end_line": 8,
+          "body_end_column": 2,
+          "return_annotation": "Int",
+          "parameters": [
+            {
+              "external_name": "_",
+              "local_name": "ok",
+              "type_annotation": "Bool",
+              "start_line": 5,
+              "start_column": 15,
+              "end_line": 5,
+              "end_column": 26
+            }
+          ],
+          "statements": [
+            {
+              "kind": "if_statement",
+              "start_line": 6,
+              "start_column": 5,
+              "end_line": 6,
+              "end_column": 24,
+              "condition": {
+                "kind": "identifier",
+                "name": "ok",
+                "start_line": 6,
+                "start_column": 8,
+                "end_line": 6,
+                "end_column": 10
+              },
+              "then_statements": [
+                {
+                  "kind": "return_statement",
+                  "start_line": 6,
+                  "start_column": 13,
+                  "end_line": 6,
+                  "end_column": 22,
+                  "value": {
+                    "kind": "literal",
+                    "text": "1",
+                    "start_line": 6,
+                    "start_column": 20,
+                    "end_line": 6,
+                    "end_column": 21
+                  }
+                }
+              ],
+              "else_statements": []
+            },
+            {
+              "kind": "throw_statement",
+              "start_line": 7,
+              "start_column": 5,
+              "end_line": 7,
+              "end_column": 23,
+              "value": {
+                "kind": "member_access",
+                "member": "failed",
+                "start_line": 7,
+                "start_column": 11,
+                "end_line": 7,
+                "end_column": 23,
+                "base": {
+                  "kind": "identifier",
+                  "name": "Boom",
+                  "start_line": 7,
+                  "start_column": 11,
+                  "end_line": 7,
+                  "end_column": 15
+                }
+              }
+            }
+          ]
+        },
+        {
+          "kind": "function",
+          "name": "caller",
+          "parent_type": null,
+          "start_line": 10,
+          "start_column": 1,
+          "end_line": 12,
+          "end_column": 2,
+          "body_start_line": 10,
+          "body_start_column": 22,
+          "body_end_line": 12,
+          "body_end_column": 2,
+          "return_annotation": "Int",
+          "parameters": [],
+          "statements": [
+            {
+              "kind": "return_statement",
+              "start_line": 11,
+              "start_column": 5,
+              "end_line": 11,
+              "end_column": 28,
+              "value": {
+                "kind": "try_expression",
+                "style": "try!",
+                "start_line": 11,
+                "start_column": 12,
+                "end_line": 11,
+                "end_column": 28,
+                "operand": {
+                  "kind": "call",
+                  "callee_text": "mayFail",
+                  "is_try": true,
+                  "is_try_optional": false,
+                  "is_try_force": true,
+                  "start_line": 11,
+                  "start_column": 17,
+                  "end_line": 11,
+                  "end_column": 28,
+                  "callee": {
+                    "kind": "identifier",
+                    "name": "mayFail",
+                    "start_line": 11,
+                    "start_column": 17,
+                    "end_line": 11,
+                    "end_column": 24
+                  },
+                  "arguments": [
+                    {
+                      "kind": "literal",
+                      "text": "true",
+                      "start_line": 11,
+                      "start_column": 25,
+                      "end_line": 11,
+                      "end_column": 29
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "markers": [],
+      "calls": [],
+      "unsupported": [],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": [],
+  "errors": []
+}
