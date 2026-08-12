@@ -1,0 +1,94 @@
+[
+  {
+    "id": "swift.force_unwrap_risk:fixtures.swift.vertical.force_unwrap_risk.swift:4:12",
+    "rule_id": "swift.force_unwrap_risk",
+    "title": "Force unwrap of a value that may be nil",
+    "severity": "high",
+    "confidence": "high",
+    "location": {
+      "file_path": "fixtures/swift/vertical/force_unwrap_risk.swift",
+      "start_line": 4,
+      "start_column": 12,
+      "end_line": 4,
+      "end_column": 18
+    },
+    "symbol_name": "loadTitle",
+    "bug_type": "crash",
+    "description": "`!` force unwrap in `loadTitle` cannot be proven non-nil on an explored path (unknown). 2 nodes; 1 path(s) explored; operand `value` nilness=unknown",
+    "risk": "The process can crash if the optional is nil at this site.",
+    "path_summary": "2 nodes; 1 path(s) explored; operand `value` nilness=unknown",
+    "proof": {
+      "tier": 2,
+      "kind": "repro_steps",
+      "supported": true,
+      "trigger_condition": "Call `loadTitle` such that `value` is nil, reaching fixtures/swift/vertical/force_unwrap_risk.swift:4.",
+      "expected_behavior": "Process crashes on force unwrap of a nil optional.",
+      "assumptions": [
+        "Local intra-procedural facts only; no callee descent.",
+        "`value` is optional and not proven non-nil on this path."
+      ],
+      "content": "1. Enter `loadTitle` with `value` = nil.\n2. Follow path: 2 nodes; 1 path(s) explored; operand `value` nilness=unknown\n3. Execute the force unwrap at line 4.\n4. Observe a runtime crash (EXC_BAD_INSTRUCTION / unexpectedly found nil).",
+      "language": "text"
+    },
+    "recommended_fix": "Use optional binding (`guard let` / `if let`) or `??` instead of `!`.",
+    "eligibility_context": {
+      "state": "cfg-ready",
+      "reason": "cfg-ready",
+      "can_build_cfg": true,
+      "unsupported_construct_count": 0,
+      "warning_count": 0
+    },
+    "unsupported_constructs": [],
+    "advisory": {
+      "llm_used": false,
+      "provider": null,
+      "content": []
+    }
+  },
+  {
+    "id": "swift.force_unwrap_risk:fixtures.swift.vertical.force_unwrap_risk.swift:9:12",
+    "rule_id": "swift.force_unwrap_risk",
+    "title": "Force unwrap of a value that may be nil",
+    "severity": "high",
+    "confidence": "high",
+    "location": {
+      "file_path": "fixtures/swift/vertical/force_unwrap_risk.swift",
+      "start_line": 9,
+      "start_column": 12,
+      "end_line": 9,
+      "end_column": 18
+    },
+    "symbol_name": "alwaysNil",
+    "bug_type": "crash",
+    "description": "`!` force unwrap in `alwaysNil` cannot be proven non-nil on an explored path (nil). 3 nodes; 1 path(s) explored; operand `value` nilness=nil",
+    "risk": "The process can crash if the optional is nil at this site.",
+    "path_summary": "3 nodes; 1 path(s) explored; operand `value` nilness=nil",
+    "proof": {
+      "tier": 2,
+      "kind": "repro_steps",
+      "supported": true,
+      "trigger_condition": "Call `alwaysNil` such that `value` is nil, reaching fixtures/swift/vertical/force_unwrap_risk.swift:9.",
+      "expected_behavior": "Process crashes on force unwrap of a nil optional.",
+      "assumptions": [
+        "Local intra-procedural facts only; no callee descent.",
+        "`value` is optional and not proven non-nil on this path."
+      ],
+      "content": "1. Enter `alwaysNil` with `value` = nil.\n2. Follow path: 3 nodes; 1 path(s) explored; operand `value` nilness=nil\n3. Execute the force unwrap at line 9.\n4. Observe a runtime crash (EXC_BAD_INSTRUCTION / unexpectedly found nil).",
+      "language": "text"
+    },
+    "recommended_fix": "Use optional binding (`guard let` / `if let`) or `??` instead of `!`.",
+    "eligibility_context": {
+      "state": "cfg-ready",
+      "reason": "cfg-ready",
+      "can_build_cfg": true,
+      "unsupported_construct_count": 0,
+      "warning_count": 0
+    },
+    "unsupported_constructs": [],
+    "advisory": {
+      "llm_used": false,
+      "provider": null,
+      "content": []
+    }
+  }
+]

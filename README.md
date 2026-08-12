@@ -41,6 +41,15 @@ pytest -q tests/test_parser_helper.py
 
 Downstream modules import `ultra_trace.frontend` only (not `ultra_trace.parser`). Map helper JSON with `ultra_trace.swift_frontend.normalize_helper_output`.
 
+## Vertical slice (Slice 4)
+
+Rule implemented: `swift.force_unwrap_risk`.
+
+```bash
+./scripts/build_parser_helper.sh
+ultra-trace analyze --repo-root fixtures/swift/vertical --output-dir /tmp/ut-slice4
+```
+
 ## License
 Copyright 2026 Rodney Degracia
 

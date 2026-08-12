@@ -16,9 +16,13 @@ from ultra_trace.config import (
     apply_cli_overrides,
     load_layered_config,
 )
+from ultra_trace.core.findings import Finding
 from ultra_trace.discovery.scanner import default_scanner
+from ultra_trace.engine.pipeline import analyze_repository
 from ultra_trace.logging_setup import setup_logging
+from ultra_trace.parser.helper import HelperNotFoundError, HelperVersionError
 from ultra_trace.reporting.writers import write_reports
+from ultra_trace.rules import DECLARED_RULES, IMPLEMENTED_RULES
 
 app = typer.Typer(
     name="ultra-trace",
@@ -85,7 +89,7 @@ def analyze(
     analysis_mode: Optional[list[str]] = typer.Option(None, "--analysis-mode"),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
-    """Discover Swift files and emit scaffold reports (analysis TBD in later slices)."""
+    """Discover, normalize, explore, and emit Core findings (force unwrap)."""
     if llm_enabled and no_llm:
         raise typer.BadParameter("--llm-enabled and --no-llm are mutually exclusive")
 
@@ -123,23 +127,51 @@ def analyze(
     )
     logger.info("Discovered %d Swift file(s) under %s", len(files), repo_root)
 
-    result = write_reports(
+    if dry_run:
+        write_reports(
+            output_dir=output_dir,
+            basename=output_basename,
+            formats=cfg.output_formats,
+            repo_root=repo_root,
+            files_discovered=len(files),
+            dry_run=True,
+        )
+        typer.echo(
+            f"Dry run: discovered {len(files)} Swift file(s); reports not written."
+        )
+        return
+
+    try:
+        analysis = analyze_repository(repo_root, cfg, files=files)
+    except HelperNotFoundError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=4) from exc
+    except HelperVersionError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=4) from exc
+
+    written = write_reports(
         output_dir=output_dir,
         basename=output_basename,
         formats=cfg.output_formats,
         repo_root=repo_root,
         files_discovered=len(files),
-        dry_run=dry_run,
+        result=analysis,
+        privacy_mode=cfg.privacy_mode,
+        severity_threshold=cfg.severity_threshold,
+        max_depth=cfg.max_depth,
     )
-    if dry_run:
-        typer.echo(
-            f"Dry run: discovered {len(files)} Swift file(s); reports not written."
-        )
-    else:
-        if result.markdown_path:
-            typer.echo(f"Wrote {result.markdown_path}")
-        if result.json_path:
-            typer.echo(f"Wrote {result.json_path}")
+    if written.markdown_path:
+        typer.echo(f"Wrote {written.markdown_path}")
+    if written.json_path:
+        typer.echo(f"Wrote {written.json_path}")
+    for proof_path in written.proof_paths:
+        typer.echo(f"Wrote {proof_path}")
+    typer.echo(
+        f"Findings: {len(analysis.findings)} "
+        f"(paths={analysis.paths_explored})"
+    )
+    raise typer.Exit(code=_exit_for_findings(analysis.findings, cfg.severity_threshold))
 
 
 @app.command("report")
@@ -176,30 +208,49 @@ def report_cmd(
 def list_rules(
     format: str = typer.Option("text", "--format", help="text|json"),
 ) -> None:
-    """List MVP rules (stub until Slice 6)."""
+    """List Core rules and which ones are implemented."""
     if format not in {"text", "json"}:
         raise typer.BadParameter("--format must be text or json")
-    rules = [
-        "swift.force_unwrap_risk",
-        "swift.try_bang_risk",
-        "swift.forced_cast_risk",
-        "swift.array_bounds_risk",
-        "swift.shallow_taint_flow",
-        "swift.dead_branch_candidate",
-    ]
+    implemented = set(IMPLEMENTED_RULES)
     if format == "json":
         import json
 
-        typer.echo(json.dumps({"rules": rules, "status": "declared-not-implemented"}))
+        typer.echo(
+            json.dumps(
+                {
+                    "rules": [
+                        {
+                            "id": rule,
+                            "status": (
+                                "implemented" if rule in implemented else "declared"
+                            ),
+                        }
+                        for rule in DECLARED_RULES
+                    ]
+                }
+            )
+        )
     else:
-        typer.echo("Ultra-Trace Core rules (not implemented until Slice 6):")
-        for rule in rules:
-            typer.echo(f"- {rule}")
+        typer.echo("Ultra-Trace Core rules:")
+        for rule in DECLARED_RULES:
+            mark = "implemented" if rule in implemented else "declared"
+            typer.echo(f"- {rule} ({mark})")
 
 
 @app.command("version")
 def version() -> None:
     typer.echo(__version__)
+
+
+_SEV_RANK = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+
+
+def _exit_for_findings(findings: list[Finding] | tuple[Finding, ...], threshold: str) -> int:
+    floor = _SEV_RANK.get(threshold, 1)
+    for finding in findings:
+        if _SEV_RANK.get(finding.severity, 0) >= floor:
+            return 1
+    return 0
 
 
 def main() -> None:
