@@ -1,26 +1,38 @@
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 from typing import Optional
 
 import typer
+import yaml
 
 from ultra_trace import __version__
 from ultra_trace.appdir import bootstrap_user_environment
 from ultra_trace.config import (
     AnalysisMode,
     OutputFormat,
-    PrivacyMode,
-    SeverityLevel,
     apply_cli_overrides,
     load_layered_config,
 )
-from ultra_trace.core.findings import Finding
 from ultra_trace.discovery.scanner import default_scanner
 from ultra_trace.engine.pipeline import analyze_repository
 from ultra_trace.logging_setup import setup_logging
-from ultra_trace.parser.helper import HelperNotFoundError, HelperVersionError
+from ultra_trace.parser.helper import (
+    HelperInvocationError,
+    HelperNotFoundError,
+    HelperTimeoutError,
+    HelperVersionError,
+)
+from ultra_trace.reporting.exit_codes import (
+    EXIT_FRONTEND,
+    EXIT_INTERNAL,
+    EXIT_USAGE,
+    exit_for_analysis,
+)
+from ultra_trace.reporting.json_report import normalize_report_payload
+from ultra_trace.reporting.markdown import markdown_from_payload
 from ultra_trace.reporting.writers import write_reports
 from ultra_trace.rules import DECLARED_RULES, IMPLEMENTED_RULES
 
@@ -31,6 +43,11 @@ app = typer.Typer(
     add_completion=False,
 )
 logger = logging.getLogger(__name__)
+
+_SEVERITIES = {"low", "medium", "high", "critical"}
+_PRIVACY = {"offline", "redacted", "full-assist"}
+_FORMATS = {"markdown", "json"}
+_MODES = {"core", "advanced"}
 
 
 def _configure_logging(verbose: bool, quiet: bool) -> None:
@@ -87,22 +104,42 @@ def analyze(
     model: Optional[str] = typer.Option(None, "--model"),
     base_url: Optional[str] = typer.Option(None, "--base-url"),
     analysis_mode: Optional[list[str]] = typer.Option(None, "--analysis-mode"),
+    fail_on_partial_analysis: bool = typer.Option(False, "--fail-on-partial-analysis"),
+    fail_on_parser_drift: bool = typer.Option(False, "--fail-on-parser-drift"),
+    fail_on_advanced_unavailable: bool = typer.Option(
+        False, "--fail-on-advanced-unavailable"
+    ),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
-    """Discover, normalize, explore, and emit Core findings (force unwrap)."""
+    """Discover, analyze, and emit Core markdown/JSON reports."""
     if llm_enabled and no_llm:
         raise typer.BadParameter("--llm-enabled and --no-llm are mutually exclusive")
+    if severity_threshold is not None and severity_threshold not in _SEVERITIES:
+        raise typer.BadParameter("--severity-threshold must be low|medium|high|critical")
+    if privacy_mode is not None and privacy_mode not in _PRIVACY:
+        raise typer.BadParameter("--privacy-mode must be offline|redacted|full-assist")
+    if config is not None and not config.is_file():
+        typer.echo(f"configuration error: config not found: {config}", err=True)
+        raise typer.Exit(code=EXIT_USAGE)
 
-    cfg = load_layered_config(project_config=config, repo_root=repo_root)
+    try:
+        cfg = load_layered_config(project_config=config, repo_root=repo_root)
+    except (ValueError, yaml.YAMLError) as exc:
+        typer.echo(f"configuration error: {exc}", err=True)
+        raise typer.Exit(code=EXIT_USAGE) from exc
     formats: list[OutputFormat] | None = None
     if format:
-        formats = [f for f in format if f in ("markdown", "json")]  # type: ignore[misc]
+        if any(item not in _FORMATS for item in format):
+            raise typer.BadParameter("--format must be markdown and/or json")
+        formats = [f for f in format if f in _FORMATS]  # type: ignore[misc]
         if not formats:
             raise typer.BadParameter("--format must be markdown and/or json")
 
     modes: list[AnalysisMode] | None = None
     if analysis_mode:
-        modes = [m for m in analysis_mode if m in ("core", "advanced")]  # type: ignore[misc]
+        if any(item not in _MODES for item in analysis_mode):
+            raise typer.BadParameter("--analysis-mode must be core or advanced")
+        modes = [m for m in analysis_mode if m in _MODES]  # type: ignore[misc]
 
     cfg = apply_cli_overrides(
         cfg,
@@ -118,6 +155,13 @@ def analyze(
         model=model,
         base_url=base_url,
     )
+
+    if "advanced" in cfg.analysis_modes and fail_on_advanced_unavailable:
+        typer.echo(
+            "Advanced mode was requested but SIL is not available in MVP Core.",
+            err=True,
+        )
+        raise typer.Exit(code=EXIT_FRONTEND)
 
     scanner = default_scanner()
     files = scanner.discover_swift_files(
@@ -142,13 +186,28 @@ def analyze(
         return
 
     try:
-        analysis = analyze_repository(repo_root, cfg, files=files)
+        analysis = analyze_repository(
+            repo_root,
+            cfg,
+            files=files,
+            validate_helper=True,
+            fail_on_parser_drift=fail_on_parser_drift,
+        )
     except HelperNotFoundError as exc:
         typer.echo(str(exc), err=True)
-        raise typer.Exit(code=4) from exc
+        raise typer.Exit(code=EXIT_FRONTEND) from exc
     except HelperVersionError as exc:
         typer.echo(str(exc), err=True)
-        raise typer.Exit(code=4) from exc
+        raise typer.Exit(code=EXIT_FRONTEND) from exc
+    except (HelperInvocationError, HelperTimeoutError) as exc:
+        typer.echo(f"internal analyzer failure: {exc}", err=True)
+        raise typer.Exit(code=EXIT_INTERNAL) from exc
+    except typer.Exit:
+        raise
+    except Exception as exc:  # noqa: BLE001 — map unexpected failures to exit 3
+        logger.exception("Internal analyzer failure")
+        typer.echo(f"internal analyzer failure: {exc}", err=True)
+        raise typer.Exit(code=EXIT_INTERNAL) from exc
 
     written = write_reports(
         output_dir=output_dir,
@@ -160,6 +219,8 @@ def analyze(
         privacy_mode=cfg.privacy_mode,
         severity_threshold=cfg.severity_threshold,
         max_depth=cfg.max_depth,
+        llm_enabled=cfg.llm.enabled,
+        analysis_modes=cfg.analysis_modes,
     )
     if written.markdown_path:
         typer.echo(f"Wrote {written.markdown_path}")
@@ -168,10 +229,15 @@ def analyze(
     for proof_path in written.proof_paths:
         typer.echo(f"Wrote {proof_path}")
     typer.echo(
-        f"Findings: {len(analysis.findings)} "
-        f"(paths={analysis.paths_explored})"
+        f"Findings: {len(analysis.findings)} (paths={analysis.paths_explored})"
     )
-    raise typer.Exit(code=_exit_for_findings(analysis.findings, cfg.severity_threshold))
+    raise typer.Exit(
+        code=exit_for_analysis(
+            analysis,
+            severity_threshold=cfg.severity_threshold,
+            fail_on_partial_analysis=fail_on_partial_analysis,
+        )
+    )
 
 
 @app.command("report")
@@ -181,22 +247,27 @@ def report_cmd(
     output: Optional[Path] = typer.Option(None, "--output"),
     stdout: bool = typer.Option(False, "--stdout"),
 ) -> None:
-    """Re-render reports (Slice 1 stub: copies/prints JSON shell notes)."""
-    if format not in {"markdown", "json"}:
+    """Re-render a markdown or JSON report from analysis JSON."""
+    if format not in _FORMATS:
         raise typer.BadParameter("--format must be markdown or json")
     if not stdout and output is None:
         raise typer.BadParameter("Provide --output or --stdout")
 
-    text = input_path.read_text(encoding="utf-8")
-    if format == "json":
-        body = text
-    else:
-        body = (
-            "# Ultra-Trace Nightly Analysis Report\n\n"
-            "## Executive Summary\n"
-            "Slice 1 stub: markdown re-render from JSON is not fully implemented yet.\n\n"
-            f"Input: `{input_path}`\n"
-        )
+    try:
+        payload = json.loads(input_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("report JSON must be an object")
+        normalized = normalize_report_payload(payload)
+        if format == "json":
+            body = json.dumps(normalized, indent=2, sort_keys=False) + "\n"
+        else:
+            body = markdown_from_payload(normalized)
+    except typer.BadParameter:
+        raise
+    except (OSError, json.JSONDecodeError, ValueError, KeyError, TypeError) as exc:
+        typer.echo(f"report render failed: {exc}", err=True)
+        raise typer.Exit(code=EXIT_INTERNAL) from exc
+
     if stdout:
         typer.echo(body)
     elif output is not None:
@@ -213,8 +284,6 @@ def list_rules(
         raise typer.BadParameter("--format must be text or json")
     implemented = set(IMPLEMENTED_RULES)
     if format == "json":
-        import json
-
         typer.echo(
             json.dumps(
                 {
@@ -240,17 +309,6 @@ def list_rules(
 @app.command("version")
 def version() -> None:
     typer.echo(__version__)
-
-
-_SEV_RANK = {"low": 0, "medium": 1, "high": 2, "critical": 3}
-
-
-def _exit_for_findings(findings: list[Finding] | tuple[Finding, ...], threshold: str) -> int:
-    floor = _SEV_RANK.get(threshold, 1)
-    for finding in findings:
-        if _SEV_RANK.get(finding.severity, 0) >= floor:
-            return 1
-    return 0
 
 
 def main() -> None:

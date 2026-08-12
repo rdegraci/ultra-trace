@@ -173,6 +173,7 @@ def validate_helper(
     pin: ToolchainPin | None = None,
     configured_parser_version: str | None = None,
     timeout_seconds: float = 30.0,
+    fail_on_parser_drift: bool = False,
 ) -> HelperVersionInfo:
     """Validate helper availability/version against the pin and optional config."""
     pin = pin or load_toolchain_pin()
@@ -213,6 +214,8 @@ def validate_helper(
         return info
 
     message = "Parser/toolchain drift detected: " + "; ".join(problems)
+    if fail_on_parser_drift:
+        raise HelperVersionError(message)
     if pin.drift_policy == "ignore":
         logger.warning("%s (drift_policy=ignore)", message)
         return info
@@ -232,6 +235,7 @@ def invoke_helper(
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
     validate: bool = True,
     pin: ToolchainPin | None = None,
+    fail_on_parser_drift: bool = False,
 ) -> HelperResult:
     """
     Invoke the helper deterministically.
@@ -251,6 +255,7 @@ def invoke_helper(
             pin=pin,
             configured_parser_version=configured_parser_version,
             timeout_seconds=min(30.0, timeout_seconds),
+            fail_on_parser_drift=fail_on_parser_drift,
         )
         if validate
         else query_helper_version(helper, timeout_seconds=min(30.0, timeout_seconds))

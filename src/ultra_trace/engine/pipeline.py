@@ -97,6 +97,8 @@ def analyze_repository(
     cfg: UltraTraceConfig,
     *,
     files: Sequence[RepositoryFile] | None = None,
+    validate_helper: bool = True,
+    fail_on_parser_drift: bool = False,
 ) -> AnalysisResult:
     scanner = default_scanner()
     discovered = (
@@ -124,7 +126,8 @@ def analyze_repository(
         configured_path=cfg.swift_frontend.helper_path,
         configured_parser_version=cfg.swift_frontend.parser_version,
         timeout_seconds=float(cfg.swift_frontend.helper_timeout_seconds),
-        validate=True,
+        validate=validate_helper,
+        fail_on_parser_drift=fail_on_parser_drift,
     )
     unit = normalize_helper_output(helper.payload)
     return analyze_unit(

@@ -1,0 +1,28 @@
+{
+  "parser": {
+    "parser_name": "swift-parser-helper",
+    "parser_version": "0.1.0",
+    "toolchain_name": null,
+    "toolchain_version": null
+  },
+  "eligibility_counts": {
+    "parsed": 0,
+    "normalized": 0,
+    "cfg-ready": 0,
+    "partially-analyzed": 2,
+    "skipped": 0
+  },
+  "unsupported_constructs": {
+    "total": 1,
+    "by_kind": {
+      "macro": 1
+    }
+  },
+  "call_resolution": {
+    "resolved": 0,
+    "unresolved": 0,
+    "ambiguous": 0,
+    "unsupported": 0,
+    "total": 0
+  }
+}

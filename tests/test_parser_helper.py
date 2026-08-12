@@ -10,11 +10,13 @@ import pytest
 from ultra_trace.parser.extract import extract_spike_metadata
 from ultra_trace.parser.helper import (
     HelperNotFoundError,
+    HelperVersionError,
+    HelperVersionInfo,
     discover_helper,
     invoke_helper,
     validate_helper,
 )
-from ultra_trace.parser.versions import load_toolchain_pin
+from ultra_trace.parser.versions import ToolchainPin, load_toolchain_pin
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = REPO_ROOT / "fixtures" / "swift"
@@ -31,6 +33,40 @@ requires_helper = pytest.mark.skipif(
     _helper_available() is None,
     reason="swift-parser-helper not built; run ./scripts/build_parser_helper.sh",
 )
+
+
+def test_fail_on_parser_drift_overrides_warn_policy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pin = ToolchainPin(
+        helper_name="swift-parser-helper",
+        helper_version="0.1.0",
+        schema_version="1.0",
+        swift_syntax_version="600.0.0",
+        expected_swift_version_prefix="6.2",
+        drift_policy="warn",
+    )
+    drifted = HelperVersionInfo(
+        helper_name="other-helper",
+        helper_version="9.9.9",
+        schema_version="0.0",
+        swift_syntax_version="0",
+        toolchain_name=None,
+        toolchain_version=None,
+        raw={},
+    )
+    monkeypatch.setattr(
+        "ultra_trace.parser.helper.query_helper_version",
+        lambda *args, **kwargs: drifted,
+    )
+    with pytest.raises(HelperVersionError):
+        validate_helper(
+            Path("/usr/bin/true"), pin=pin, fail_on_parser_drift=True
+        )
+    info = validate_helper(
+        Path("/usr/bin/true"), pin=pin, fail_on_parser_drift=False
+    )
+    assert info.helper_version == "9.9.9"
 
 
 def test_toolchain_pin_loads() -> None:
