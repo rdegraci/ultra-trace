@@ -1,10 +1,17 @@
 # ultra-trace
 
 Deterministic static analysis CLI for Swift (Core MVP). Product docs live in
-[`docs/cache/`](docs/cache/README.md).
+[`docs/cache/`](docs/cache/README.md) (local/gitignored planning tree).
 
-Phase 1 (Slices 1–8) is complete. There is no SIL, no call-tree descent, and
-only the six Core rules.
+**Phase 1 (Slices 1–8) is complete.** There is no SIL, no call-tree descent, and
+only the six Core rules. Next: [`docs/cache/PHASES.md`](docs/cache/PHASES.md) Phase 2.
+
+### Coming back later
+
+1. `source .venv/bin/activate` (or recreate venv + `pip install -e ".[dev]"`).
+2. Rebuild helper if needed: `./scripts/build_parser_helper.sh`
+3. Sanity: `ultra-trace analyze --config examples/ultra-trace.yml --repo-root fixtures/swift/vertical --output-dir /tmp/ut-check`
+4. Read `docs/cache/README.md` → then start Phase 2 in `docs/cache/PHASES.md`.
 
 ## Install
 
