@@ -178,11 +178,21 @@ def analyze(
         raise typer.Exit(code=EXIT_USAGE) from exc
 
     if "advanced" in cfg.analysis_modes and fail_on_advanced_unavailable:
-        typer.echo(
-            "Advanced mode was requested but SIL is not available in MVP Core.",
-            err=True,
+        from ultra_trace.advanced.availability import resolve_advanced_status
+
+        status = resolve_advanced_status(
+            requested=True,
+            advanced_enabled=True,
+            sil_toolchain_path=cfg.advanced.sil_toolchain_path,
+            sil_pipeline_ready=False,
         )
-        raise typer.Exit(code=EXIT_FRONTEND)
+        if not status.ran:
+            reason = status.fallback_reason or "advanced_unavailable"
+            typer.echo(
+                f"Advanced mode was requested but is unavailable ({reason}).",
+                err=True,
+            )
+            raise typer.Exit(code=EXIT_FRONTEND)
 
     scanner = default_scanner()
     files = scanner.discover_swift_files(

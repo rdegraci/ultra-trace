@@ -59,6 +59,7 @@
       "requested": false,
       "ran": false,
       "fallback_to_core": false,
+      "fallback_reason": null,
       "sil": {
         "toolchain_name": null,
         "toolchain_version": null,

@@ -5,6 +5,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Sequence
 
+from ultra_trace.advanced.availability import AdvancedStatus, resolve_advanced_status
 from ultra_trace.cfg.builder import CFGBuilder
 from ultra_trace.cfg.models import ControlFlowGraph
 from ultra_trace.config import CallSummaryConfig, UltraTraceConfig
@@ -33,6 +34,7 @@ class AnalysisResult:
     files_discovered: int
     llm: LLMRunMetadata | None = None
     resolved_plan: ExplorationPlan | None = None
+    advanced: AdvancedStatus | None = None
 
 
 def analyze_unit(
@@ -156,6 +158,12 @@ def _analyze_repository_inner(
     )
     session = LLMSession(cfg)
     plan = session.resolve_plan()
+    advanced = resolve_advanced_status(
+        requested="advanced" in cfg.analysis_modes,
+        advanced_enabled=cfg.advanced.enabled or ("advanced" in cfg.analysis_modes),
+        sil_toolchain_path=cfg.advanced.sil_toolchain_path,
+        sil_pipeline_ready=False,
+    )
     catalog = TaintCatalog.from_patterns(
         sources=cfg.source_patterns,
         sinks=cfg.sink_patterns,
@@ -180,6 +188,7 @@ def _analyze_repository_inner(
             result,
             llm=session.metadata_after(plan, result.findings),
             resolved_plan=plan,
+            advanced=advanced,
         )
 
     helper = invoke_helper(
@@ -203,4 +212,5 @@ def _analyze_repository_inner(
         result,
         llm=session.metadata_after(plan, result.findings),
         resolved_plan=plan,
+        advanced=advanced,
     )

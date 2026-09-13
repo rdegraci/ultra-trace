@@ -202,6 +202,27 @@ def report_json(
     modes = [m for m in analysis_modes if m in {"core", "advanced"}] or ["core"]
     if "core" not in modes:
         modes = ["core", *modes]
+    if result.advanced is not None:
+        advanced_block: dict[str, object] = result.advanced.to_json()
+    else:
+        advanced_block = {
+            "enabled": False,
+            "requested": "advanced" in modes,
+            "ran": False,
+            "fallback_to_core": "advanced" in modes,
+            "fallback_reason": (
+                "sil_pipeline_not_implemented" if "advanced" in modes else None
+            ),
+            "sil": {
+                "toolchain_name": None,
+                "toolchain_version": None,
+                "available": False,
+            },
+            "coverage": {
+                "functions_advanced": 0,
+                "paths_explored_advanced": 0,
+            },
+        }
     return {
         "schema_version": "1.0",
         "generated_at": stamp,
@@ -236,21 +257,7 @@ def report_json(
                 "unsupported_constructs": unsupported_summary(unit),
                 "call_resolution": call_resolution_counts(unit),
             },
-            "advanced": {
-                "enabled": False,
-                "requested": "advanced" in modes,
-                "ran": False,
-                "fallback_to_core": "advanced" in modes,
-                "sil": {
-                    "toolchain_name": None,
-                    "toolchain_version": None,
-                    "available": False,
-                },
-                "coverage": {
-                    "functions_advanced": 0,
-                    "paths_explored_advanced": 0,
-                },
-            },
+            "advanced": advanced_block,
             "llm": _llm_fields(
                 result, llm_enabled=llm_enabled, resolved_plan_id=resolved_plan_id
             ),
