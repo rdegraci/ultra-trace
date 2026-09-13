@@ -17,6 +17,7 @@ PrivacyMode = Literal["offline", "redacted", "full-assist"]
 SeverityLevel = Literal["low", "medium", "high", "critical"]
 OutputFormat = Literal["markdown", "json"]
 AnalysisMode = Literal["core", "advanced"]
+RulePack = Literal["core", "advanced"]
 
 
 @dataclass(frozen=True)
@@ -71,6 +72,7 @@ class UltraTraceConfig:
     )
     focus_modules: tuple[str, ...] = ()
     analysis_modes: tuple[AnalysisMode, ...] = ("core",)
+    rule_packs: tuple[RulePack, ...] = ("core",)
     severity_threshold: SeverityLevel = "medium"
     proof_mode: str = "mixed"
     output_formats: tuple[OutputFormat, ...] = ("markdown", "json")
@@ -91,6 +93,7 @@ _CAMEL_TO_SNAKE = {
     "excludePaths": "exclude_paths",
     "focusModules": "focus_modules",
     "analysisModes": "analysis_modes",
+    "rulePacks": "rule_packs",
     "severityThreshold": "severity_threshold",
     "proofMode": "proof_mode",
     "outputFormats": "output_formats",
@@ -211,6 +214,7 @@ def merge_config(
                 "exclude_paths",
                 "focus_modules",
                 "analysis_modes",
+                "rule_packs",
                 "output_formats",
                 "source_patterns",
                 "sink_patterns",

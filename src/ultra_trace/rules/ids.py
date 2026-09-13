@@ -11,4 +11,6 @@ CORE_RULE_IDS: tuple[str, ...] = (
     "swift.dead_branch_candidate",
 )
 
-DECLARED_RULES: tuple[str, ...] = CORE_RULE_IDS
+ADVANCED_RULE_IDS: tuple[str, ...] = ("swift.division_by_zero_risk",)
+
+DECLARED_RULES: tuple[str, ...] = CORE_RULE_IDS + ADVANCED_RULE_IDS

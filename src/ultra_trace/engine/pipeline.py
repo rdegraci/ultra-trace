@@ -19,7 +19,7 @@ from ultra_trace.llm.models import ExplorationPlan, LLMRunMetadata
 from ultra_trace.llm.network import block_network
 from ultra_trace.llm.session import LLMSession
 from ultra_trace.parser.helper import invoke_helper
-from ultra_trace.rules.pack import core_rules
+from ultra_trace.rules.pack import rules_for_packs
 from ultra_trace.swift_frontend import normalize_helper_output
 from ultra_trace.taint.catalog import TaintCatalog
 
@@ -45,6 +45,7 @@ def analyze_unit(
     taint_catalog: TaintCatalog | None = None,
     call_summary: CallSummaryConfig | None = None,
     sdk_catalog: SDKEffectCatalog | None = None,
+    rule_packs: tuple[str, ...] = ("core",),
 ) -> AnalysisResult:
     catalog = taint_catalog or TaintCatalog.starter()
     summary_cfg = call_summary or CallSummaryConfig()
@@ -61,7 +62,7 @@ def analyze_unit(
     explorer = PathExplorer(
         max_depth=max_depth, summaries=summaries, taint_catalog=catalog
     )
-    rules = core_rules(catalog)
+    rules = rules_for_packs(rule_packs, catalog)
     findings: list[Finding] = []
     graphs: list[ControlFlowGraph] = []
     path_count = 0
@@ -183,6 +184,7 @@ def _analyze_repository_inner(
             files_discovered=0,
             taint_catalog=catalog,
             call_summary=cfg.call_summary,
+            rule_packs=cfg.rule_packs,
         )
         return replace(
             result,
@@ -207,6 +209,7 @@ def _analyze_repository_inner(
         files_discovered=len(discovered),
         taint_catalog=catalog,
         call_summary=cfg.call_summary,
+        rule_packs=cfg.rule_packs,
     )
     return replace(
         result,

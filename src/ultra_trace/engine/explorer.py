@@ -21,6 +21,7 @@ from ultra_trace.engine.facts import (
 from ultra_trace.engine.state import Nilness, SymbolicState
 from ultra_trace.frontend.models import (
     AssignmentPayload,
+    BinaryOperatorPayload,
     CallPayload,
     ForcedCastPayload,
     FrontendSymbol,
@@ -89,6 +90,17 @@ class TaintSinkEvent:
 
 
 @dataclass(frozen=True)
+class DivisionEvent:
+    expression_id: str
+    location: SourceSpan
+    operator: str
+    divisor_name: str | None
+    divisor_const: str | None
+    divisor_may_be_zero: bool
+    path_node_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class DeadBranchEvent:
     statement_id: str | None
     location: SourceSpan | None
@@ -113,6 +125,7 @@ class ExplorationResult:
     subscripts: tuple[SubscriptEvent, ...] = ()
     taint_sinks: tuple[TaintSinkEvent, ...] = ()
     dead_branches: tuple[DeadBranchEvent, ...] = ()
+    divisions: tuple[DivisionEvent, ...] = ()
 
 
 @dataclass
@@ -122,6 +135,7 @@ class _Acc:
     subscripts: list[SubscriptEvent]
     taint_sinks: list[TaintSinkEvent]
     dead_branches: list[DeadBranchEvent]
+    divisions: list[DivisionEvent]
 
 
 class PathExplorer:
@@ -148,7 +162,7 @@ class PathExplorer:
         exprs = expressions_by_id(symbol.body)
         initial = _initial_state(symbol)
         paths: list[ExploredPath] = []
-        acc = _Acc([], [], [], [], [])
+        acc = _Acc([], [], [], [], [], [])
         seen: set[tuple[str, tuple[object, ...]]] = set()
 
         def walk(
@@ -212,6 +226,7 @@ class PathExplorer:
             subscripts=tuple(acc.subscripts),
             taint_sinks=tuple(acc.taint_sinks),
             dead_branches=tuple(acc.dead_branches),
+            divisions=tuple(acc.divisions),
         )
 
     def _prune_dead(
@@ -365,6 +380,37 @@ class PathExplorer:
                                 path_node_ids=trail,
                             )
                         )
+            if expr.kind == "binary_operator" and isinstance(
+                expr.payload, BinaryOperatorPayload
+            ):
+                op = expr.payload.operator
+                if op in {"/", "%"}:
+                    divisor_name = ident_name(expr.payload.right_expression_id, exprs)
+                    divisor_const = eval_const(
+                        expr.payload.right_expression_id, exprs, state
+                    )
+                    may_zero = True
+                    if divisor_const is not None:
+                        try:
+                            may_zero = float(divisor_const) == 0.0
+                        except ValueError:
+                            may_zero = True
+                    elif divisor_name and state.facts.get(divisor_name) is not None:
+                        try:
+                            may_zero = float(state.facts[divisor_name]) == 0.0
+                        except ValueError:
+                            may_zero = True
+                    acc.divisions.append(
+                        DivisionEvent(
+                            expression_id=expr.expression_id,
+                            location=expr.location,
+                            operator=op,
+                            divisor_name=divisor_name,
+                            divisor_const=divisor_const,
+                            divisor_may_be_zero=may_zero,
+                            path_node_ids=trail,
+                        )
+                    )
 
 
 def _initial_state(symbol: FrontendSymbol) -> SymbolicState:

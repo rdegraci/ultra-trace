@@ -15,6 +15,10 @@
 analysisModes:
   - core
 
+# Phase 4: add `advanced` to enable advanced rule pack (e.g. division-by-zero).
+rulePacks:
+  - core
+
 privacyMode: offline
 
 llm:
