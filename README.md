@@ -3,8 +3,10 @@
 Deterministic static analysis CLI for Swift (Core MVP). Product docs live in
 [`docs/cache/`](docs/cache/README.md) (local/gitignored planning tree).
 
-**Phase 1 (Slices 1–8) is complete.** There is no SIL, no call-tree descent, and
-only the six Core rules. Next: [`docs/cache/PHASES.md`](docs/cache/PHASES.md) Phase 2.
+**Phase 1 (Slices 1–8) is complete.** Phase 2 proof hardening is in progress:
+High crash findings prefer Tier 1 XCTest scaffolds (labeled, not auto-executed).
+There is no SIL, no call-tree descent, and only the six Core rules. Next after
+Phase 2: [`docs/cache/PHASES.md`](docs/cache/PHASES.md) Phase 5 (call summaries).
 
 ### Coming back later
 
@@ -78,9 +80,35 @@ Writes under `--output-dir` (basename `--output-basename`, default
 |---|---|
 | `*.md` | Executive summary, findings, eligibility / unsupported counts |
 | `*.json` | Schema 1.0 payload for CI |
-| `*-proofs/*.md` | Supported proof artifacts for High findings |
+| `*-proofs/*.md` | Supported proof artifacts for High findings (Tier 1 XCTest scaffolds when justified; otherwise repro/path witness) |
 
-Authoritative fields are analyzer-owned. Any LLM prose is advisory only.
+Authoritative fields are analyzer-owned. Any LLM prose is advisory only and never
+changes severity, confidence, or proof tier/support.
+
+### Nightly CI recipe (copy-paste)
+
+```bash
+# macOS + Xcode required for the SwiftSyntax helper
+source .venv/bin/activate
+./scripts/build_parser_helper.sh
+python scripts/validate_parser_toolchain.py --fail-on-drift
+
+ultra-trace analyze \
+  --config examples/ultra-trace.yml \
+  --repo-root /path/to/swift/repo \
+  --output-dir /tmp/ultra-trace \
+  --privacy-mode offline \
+  --no-llm \
+  --analysis-mode core \
+  --severity-threshold medium
+# Exit 1 = findings at/above threshold (expected for gate jobs).
+# Do NOT pass --fail-on-partial-analysis on nightly (unsupported Swift is reported).
+# Do NOT auto-execute generated *-proofs XCTest scaffolds.
+```
+
+Proof tiers: Tier 1 = XCTest scaffold (`kind: xctest`, `language: swift`);
+Tier 2 = repro steps; Tier 3 = path witness; Tier 4 = unsupported (forces
+severity below High). Generated XCTest code is labeled for human review.
 
 ```bash
 ultra-trace report --input /tmp/ultra-trace/ultra-trace-report.json \

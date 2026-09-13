@@ -1,9 +1,13 @@
-# Sample project / nightly CI config (MVP defaults).
+# Sample project / nightly CI config (Core defaults).
 # Copy to the repo root as ultra-trace.yml or pass --config.
 #
 # Defaults: Core only, privacyMode offline, LLM off.
 # Do not set --fail-on-partial-analysis in nightly CI (unsupported Swift
 # should surface in the report, not fail the job).
+# Do not auto-execute generated XCTest proof scaffolds from *-proofs/.
+#
+# Severity gate: severityThreshold medium → exit 1 when findings meet it.
+# Privacy: offline blocks network; keep llm.enabled false unless assisting.
 #
 # Swift helper CI must run on macOS + Xcode. Pin/drift:
 #   python scripts/validate_parser_toolchain.py --fail-on-drift
