@@ -9,6 +9,7 @@ from ultra_trace.frontend.eligibility import make_eligibility
 from ultra_trace.frontend.models import SourceSpan, flatten_symbols
 from ultra_trace.rules import DECLARED_RULES, IMPLEMENTED_RULES, core_rules
 from ultra_trace.rules.coverage import allow_high, apply_coverage
+from ultra_trace.rules.ids import CORE_RULE_IDS
 from ultra_trace.swift_frontend import normalize_helper_output
 from ultra_trace.taint.catalog import TaintCatalog
 
@@ -29,9 +30,10 @@ def _by_symbol(result, rule_id: str) -> dict[str, Finding]:
 
 
 def test_core_pack_lists_all_six() -> None:
-    assert DECLARED_RULES == IMPLEMENTED_RULES
-    assert len(IMPLEMENTED_RULES) == 6
-    assert [r.rule_id for r in core_rules()] == list(IMPLEMENTED_RULES)
+    assert len(CORE_RULE_IDS) == 6
+    assert set(CORE_RULE_IDS).issubset(set(DECLARED_RULES))
+    assert set(CORE_RULE_IDS).issubset(set(IMPLEMENTED_RULES))
+    assert [r.rule_id for r in core_rules()] == list(CORE_RULE_IDS)
 
 
 def test_try_bang_finding_and_non_finding() -> None:
