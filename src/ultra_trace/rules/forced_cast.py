@@ -5,6 +5,8 @@ from ultra_trace.core.findings import Finding
 from ultra_trace.engine.explorer import ExplorationResult, ForcedCastEvent
 from ultra_trace.frontend.models import FrontendSymbol, FrontendUnit
 from ultra_trace.proofs.generator import repro_proof
+from ultra_trace.proofs.templates import prefers_xctest
+from ultra_trace.proofs.xctest import forced_cast_xctest
 from ultra_trace.rules.coverage import allow_high
 from ultra_trace.rules.emit import emit_finding
 
@@ -57,24 +59,35 @@ def _finding(
     path_summary = (
         f"{len(event.path_node_ids)} nodes; {path_count} path(s); as! {target}"
     )
-    proof = repro_proof(
-        trigger=(
-            f"Call `{symbol.qualified_name}` with a value that is not `{target}` "
-            f"at {event.location.file_path}:{event.location.start_line}."
-        ),
-        expected="Process crashes on a failed forced cast.",
-        steps=(
-            f"1. Enter `{symbol.qualified_name}`.\n"
-            f"2. Follow path: {path_summary}\n"
-            f"3. Execute `as! {target}` at line {event.location.start_line}.\n"
-            "4. Observe a runtime crash if the runtime type does not match."
-        ),
-        assumptions=(
-            "Local intra-procedural facts only.",
-            "No dominating local `is` check proved the target type on this path.",
-        ),
-        high=high,
+    trigger = (
+        f"Call `{symbol.qualified_name}` with a value that is not `{target}` "
+        f"at {event.location.file_path}:{event.location.start_line}."
     )
+    expected = "Process crashes on a failed forced cast."
+    assumptions = (
+        "Local intra-procedural facts only.",
+        "No dominating local `is` check proved the target type on this path.",
+    )
+    if high and prefers_xctest(RULE_ID):
+        proof = forced_cast_xctest(
+            location=event.location,
+            symbol_name=symbol.qualified_name,
+            type_name=event.type_name,
+            path_summary=path_summary,
+        )
+    else:
+        proof = repro_proof(
+            trigger=trigger,
+            expected=expected,
+            steps=(
+                f"1. Enter `{symbol.qualified_name}`.\n"
+                f"2. Follow path: {path_summary}\n"
+                f"3. Execute `as! {target}` at line {event.location.start_line}.\n"
+                "4. Observe a runtime crash if the runtime type does not match."
+            ),
+            assumptions=assumptions,
+            high=high,
+        )
     return emit_finding(
         rule_id=RULE_ID,
         title="Forced cast may crash if the runtime type differs",

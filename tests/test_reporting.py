@@ -64,8 +64,12 @@ def test_proof_output_golden(tmp_path: Path) -> None:
     write_proof_file(dest, load.proof, load.id)
     expected = (GOLDENS / "force_unwrap_proof.md").read_text(encoding="utf-8")
     assert dest.read_text(encoding="utf-8") == expected
-    assert "Tier: 2" in expected
+    assert "Tier: 1" in expected
+    assert "Kind: xctest" in expected
+    assert "Language: swift" in expected
     assert "Supported: True" in expected
+    assert "## Assumptions" in expected
+    assert "import XCTest" in expected
 
 
 def test_eligibility_section_golden() -> None:
@@ -92,7 +96,9 @@ def test_report_json_schema_core_fields() -> None:
     finding = payload["findings"][0]
     assert finding["severity"] == "high"
     assert finding["confidence"] == "high"
-    assert finding["proof"]["tier"] == 2
+    assert finding["proof"]["tier"] == 1
+    assert finding["proof"]["kind"] == "xctest"
+    assert finding["proof"]["language"] == "swift"
     assert finding["proof"]["supported"] is True
     assert finding["recommended_fix"]
     assert finding["location"]["file_path"]
@@ -125,6 +131,33 @@ def test_markdown_separates_authoritative_from_advisory() -> None:
     with_advisory = markdown_from_payload(payload)
     assert "## Advisory" in with_advisory
     assert "advisory only" in with_advisory
+
+
+def test_advisory_does_not_mutate_authoritative_fields() -> None:
+    result = analyze_unit(_unit("force_unwrap.json"), max_depth=12)
+    finding = result.findings[0]
+    from ultra_trace.llm.models import AdvisoryItem
+
+    plain = finding_to_json(finding)
+    with_advisory = finding_to_json(
+        finding,
+        advisory_items=(
+            AdvisoryItem(
+                kind="recommended_fix_wording",
+                text="Maybe try something else",
+            ),
+        ),
+        advisory_provider="openai",
+    )
+    assert plain["severity"] == with_advisory["severity"] == finding.severity
+    assert plain["confidence"] == with_advisory["confidence"] == finding.confidence
+    assert plain["proof"] == with_advisory["proof"]
+    assert with_advisory["proof"]["tier"] == finding.proof.tier
+    assert with_advisory["proof"]["supported"] is finding.proof.supported
+    assert with_advisory["advisory"]["llm_used"] is True
+    assert plain["advisory"]["llm_used"] is False
+    assert plain["recommended_fix"] == with_advisory["recommended_fix"]
+    assert plain["recommended_fix"] == finding.recommended_fix
 
 
 def test_finding_order_is_severity_then_location() -> None:

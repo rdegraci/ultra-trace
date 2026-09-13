@@ -5,6 +5,8 @@ from ultra_trace.core.findings import Finding
 from ultra_trace.engine.explorer import ExplorationResult, TryBangEvent
 from ultra_trace.frontend.models import FrontendSymbol, FrontendUnit
 from ultra_trace.proofs.generator import repro_proof
+from ultra_trace.proofs.templates import prefers_xctest
+from ultra_trace.proofs.xctest import try_bang_xctest
 from ultra_trace.rules.coverage import allow_high
 from ultra_trace.rules.emit import emit_finding
 
@@ -51,24 +53,35 @@ def _finding(symbol: FrontendSymbol, event: TryBangEvent, path_count: int) -> Fi
         f"{len(event.path_node_ids)} nodes; {path_count} path(s); "
         f"try! `{event.callee_text or 'call'}`"
     )
-    proof = repro_proof(
-        trigger=(
-            f"Call `{symbol.qualified_name}` so `{event.callee_text or 'the call'}` "
-            f"throws at {event.location.file_path}:{event.location.start_line}."
-        ),
-        expected="Process crashes on uncaught error from try!.",
-        steps=(
-            f"1. Enter `{symbol.qualified_name}`.\n"
-            f"2. Follow path: {path_summary}\n"
-            f"3. Execute `try!` at line {event.location.start_line}.\n"
-            "4. Observe a runtime crash if the call throws."
-        ),
-        assumptions=(
-            "Local intra-procedural facts only; no callee descent.",
-            "A throwing target is assumed when not proven non-throwing.",
-        ),
-        high=high,
+    trigger = (
+        f"Call `{symbol.qualified_name}` so `{event.callee_text or 'the call'}` "
+        f"throws at {event.location.file_path}:{event.location.start_line}."
     )
+    expected = "Process crashes on uncaught error from try!."
+    assumptions = (
+        "Local intra-procedural facts only; no callee descent.",
+        "A throwing target is assumed when not proven non-throwing.",
+    )
+    if high and prefers_xctest(RULE_ID):
+        proof = try_bang_xctest(
+            location=event.location,
+            symbol_name=symbol.qualified_name,
+            callee_text=event.callee_text,
+            path_summary=path_summary,
+        )
+    else:
+        proof = repro_proof(
+            trigger=trigger,
+            expected=expected,
+            steps=(
+                f"1. Enter `{symbol.qualified_name}`.\n"
+                f"2. Follow path: {path_summary}\n"
+                f"3. Execute `try!` at line {event.location.start_line}.\n"
+                "4. Observe a runtime crash if the call throws."
+            ),
+            assumptions=assumptions,
+            high=high,
+        )
     return emit_finding(
         rule_id=RULE_ID,
         title="Force-try may crash if the call throws",

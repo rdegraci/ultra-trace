@@ -54,14 +54,18 @@ def test_force_unwrap_findings_and_non_findings() -> None:
     load = by_sym["loadTitle"]
     assert load.rule_id == "swift.force_unwrap_risk"
     assert load.severity == "high"
-    assert load.proof.tier == 2
+    assert load.proof.tier == 1
+    assert load.proof.kind == "xctest"
+    assert load.proof.language == "swift"
     assert load.proof.supported is True
+    assert "XCTest" in load.proof.content
     assert load.location.start_line >= 1
     assert load.path_summary
 
     always = by_sym["alwaysNil"]
     assert always.severity == "high"
-    assert always.proof.tier != 4
+    assert always.proof.tier == 1
+    assert always.proof.kind == "xctest"
 
 
 def test_proof_tier_policy_downgrades_high_with_tier_4() -> None:

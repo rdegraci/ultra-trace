@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from ultra_trace.core.findings import ProofArtifact
 from ultra_trace.frontend.models import SourceSpan
+from ultra_trace.proofs.templates import prefers_xctest
+from ultra_trace.proofs.xctest import force_unwrap_xctest
 
 
 def repro_proof(
@@ -68,6 +70,13 @@ def proof_for_force_unwrap(
         f"3. Execute the force unwrap at line {location.start_line}.\n"
         "4. Observe a runtime crash (EXC_BAD_INSTRUCTION / unexpectedly found nil)."
     )
+    if high and prefers_xctest("swift.force_unwrap_risk"):
+        return force_unwrap_xctest(
+            location=location,
+            symbol_name=symbol_name,
+            operand_name=operand_name,
+            path_summary=path_summary,
+        )
     if high:
         return ProofArtifact(
             tier=2,
@@ -99,13 +108,17 @@ def write_proof_file(path: object, artifact: ProofArtifact, finding_id: str) -> 
 
     dest = Path(str(path))
     dest.parent.mkdir(parents=True, exist_ok=True)
+    assumptions = "\n".join(f"- {item}" for item in artifact.assumptions) or "- (none)"
+    language = artifact.language or "text"
     dest.write_text(
         f"# Proof {finding_id}\n\n"
         f"- Tier: {artifact.tier}\n"
         f"- Kind: {artifact.kind}\n"
-        f"- Supported: {artifact.supported}\n\n"
+        f"- Supported: {artifact.supported}\n"
+        f"- Language: {language}\n\n"
         f"## Trigger\n{artifact.trigger_condition}\n\n"
         f"## Expected\n{artifact.expected_behavior}\n\n"
-        f"## Steps\n{artifact.content}\n",
+        f"## Assumptions\n{assumptions}\n\n"
+        f"## Content\n{artifact.content}\n",
         encoding="utf-8",
     )
