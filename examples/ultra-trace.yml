@@ -50,5 +50,10 @@ advanced:
   enabled: false
 
 callSummary:
+  # Phase 5: set enabled true and maxDepth 1–2 for bounded callee summaries.
+  # Defaults stay off so Core MVP behavior is unchanged.
   enabled: false
   maxDepth: 0
+
+# Optional: replay a recorded exploration plan from a prior run's *-plan.json
+# planReplayPath: /tmp/ultra-trace/ultra-trace-report-plan.json
