@@ -32,7 +32,11 @@ ultra-trace = "ultra_trace.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-ultra_trace = ["data/config.yaml.example", "data/dot_env.example"]
+ultra_trace = [
+  "data/config.yaml.example",
+  "data/dot_env.example",
+  "data/sdk_effects.json",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

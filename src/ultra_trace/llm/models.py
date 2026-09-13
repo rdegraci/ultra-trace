@@ -11,7 +11,7 @@ LLMFeature = Literal[
     "proof_prose_polishing",
 ]
 
-PlanSource = Literal["default", "llm", "fallback"]
+PlanSource = Literal["default", "llm", "fallback", "replay"]
 ProviderName = Literal["anthropic", "openai", "openai-compatible"]
 
 

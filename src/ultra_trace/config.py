@@ -78,6 +78,7 @@ class UltraTraceConfig:
     source_patterns: tuple[str, ...] = STARTER_SOURCE_PATTERNS
     sink_patterns: tuple[str, ...] = STARTER_SINK_PATTERNS
     sanitizer_patterns: tuple[str, ...] = STARTER_SANITIZER_PATTERNS
+    plan_replay_path: str | None = None
     llm: LLMConfig = field(default_factory=LLMConfig)
     swift_frontend: SwiftFrontendConfig = field(default_factory=SwiftFrontendConfig)
     advanced: AdvancedConfig = field(default_factory=AdvancedConfig)
@@ -97,6 +98,7 @@ _CAMEL_TO_SNAKE = {
     "sourcePatterns": "source_patterns",
     "sinkPatterns": "sink_patterns",
     "sanitizerPatterns": "sanitizer_patterns",
+    "planReplayPath": "plan_replay_path",
     "swiftFrontend": "swift_frontend",
     "callSummary": "call_summary",
     "baseURL": "base_url",

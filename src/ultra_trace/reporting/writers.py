@@ -113,6 +113,14 @@ def write_reports(
                 dest = proofs_dir / f"{_safe_name(finding.id)}.md"
                 write_proof_file(dest, finding.proof, finding.id)
                 proof_paths.append(dest)
+        if result.resolved_plan is not None:
+            from ultra_trace.llm.planning import plan_to_dict
+
+            plan_path = output_dir / f"{basename}-plan.json"
+            plan_path.write_text(
+                json.dumps(plan_to_dict(result.resolved_plan), indent=2) + "\n",
+                encoding="utf-8",
+            )
 
     return ReportWriteResult(
         markdown_path=md_path, json_path=json_path, proof_paths=tuple(proof_paths)

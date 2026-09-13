@@ -264,9 +264,11 @@ class PathExplorer:
         events: tuple[UnwrapEvent, ...] = ()
         if node.statement_id and node.statement_id in stmts:
             stmt = stmts[node.statement_id]
-            events = _unwrap_events(stmt, exprs, state, trail)
+            events = _unwrap_events(stmt, exprs, state, trail, self.summaries)
             self._scan_statement(stmt, exprs, state, trail, acc)
-            state = _apply_statement(stmt, state, exprs, self.taint_catalog)
+            state = _apply_statement(
+                stmt, state, exprs, self.taint_catalog, self.summaries
+            )
         if node.expression_id and node.kind == "condition":
             self._scan_expr(node.expression_id, exprs, state, trail, acc)
         return state, events
@@ -281,7 +283,10 @@ class PathExplorer:
         if expr is None or not isinstance(expr.payload, CallPayload):
             return state
         payload = expr.payload
-        if payload.resolved_callee_symbol_id:
+        if (
+            payload.resolved_callee_symbol_id
+            and payload.resolution_status == "resolved"
+        ):
             _ = self.summaries.summary_for(payload.resolved_callee_symbol_id)
         return state
 
@@ -380,10 +385,11 @@ def _apply_statement(
     state: SymbolicState,
     exprs: dict[str, NormalizedExpression],
     catalog: TaintCatalog,
+    summaries: FunctionSummaryProvider,
 ) -> SymbolicState:
     payload = stmt.payload
     if isinstance(payload, VariableDeclPayload):
-        value = eval_nilness(payload.initializer_expression_id, exprs, state)
+        value = eval_nilness(payload.initializer_expression_id, exprs, state, summaries)
         tags = eval_taint(payload.initializer_expression_id, exprs, state, catalog)
         const = eval_const(payload.initializer_expression_id, exprs, state)
         size = array_literal_size(payload.initializer_expression_id, exprs)
@@ -407,7 +413,7 @@ def _apply_statement(
     if isinstance(payload, AssignmentPayload) and payload.target_expression_id:
         target = exprs.get(payload.target_expression_id)
         if target and isinstance(target.payload, IdentifierPayload):
-            value = eval_nilness(payload.value_expression_id, exprs, state)
+            value = eval_nilness(payload.value_expression_id, exprs, state, summaries)
             state = state.with_nilness(target.payload.name, value)
             state = state.with_taint(
                 target.payload.name,
@@ -427,10 +433,11 @@ def _unwrap_events(
     exprs: dict[str, NormalizedExpression],
     state: SymbolicState,
     trail: tuple[str, ...],
+    summaries: FunctionSummaryProvider | None = None,
 ) -> tuple[UnwrapEvent, ...]:
     events: list[UnwrapEvent] = []
     for unwrap in unwraps_in_statement(stmt, exprs):
-        name, nilness = _unwrap_operand(unwrap, exprs, state)
+        name, nilness = _unwrap_operand(unwrap, exprs, state, summaries)
         events.append(
             UnwrapEvent(
                 expression_id=unwrap.expression_id,
@@ -447,6 +454,7 @@ def _unwrap_operand(
     unwrap: NormalizedExpression,
     exprs: dict[str, NormalizedExpression],
     state: SymbolicState,
+    summaries: FunctionSummaryProvider | None = None,
 ) -> tuple[str | None, Nilness]:
     if (
         isinstance(unwrap.payload, WrapperPayload)
@@ -455,7 +463,9 @@ def _unwrap_operand(
         operand = exprs.get(unwrap.payload.operand_expression_id)
         if operand and isinstance(operand.payload, IdentifierPayload):
             return operand.payload.name, state.get(operand.payload.name)
-        return None, eval_nilness(unwrap.payload.operand_expression_id, exprs, state)
+        return None, eval_nilness(
+            unwrap.payload.operand_expression_id, exprs, state, summaries
+        )
     return None, "unknown"
 
 

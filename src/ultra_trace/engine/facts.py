@@ -25,6 +25,7 @@ from ultra_trace.frontend.models import (
     UnknownExprPayload,
     WrapperPayload,
 )
+from ultra_trace.frontend.summaries import FunctionSummaryProvider
 from ultra_trace.taint.catalog import TaintCatalog
 
 _IS_CHECK = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s+is\s+([A-Za-z_][A-Za-z0-9_.]*)$")
@@ -35,6 +36,7 @@ def eval_nilness(
     expr_id: str | None,
     exprs: Mapping[str, NormalizedExpression],
     state: SymbolicState,
+    summaries: FunctionSummaryProvider | None = None,
 ) -> Nilness:
     if not expr_id or expr_id not in exprs:
         return "unknown"
@@ -47,6 +49,18 @@ def eval_nilness(
         return "non_nil"
     if expr.kind == "nil_coalescing":
         return "non_nil"
+    if (
+        expr.kind == "call"
+        and isinstance(expr.payload, CallPayload)
+        and summaries is not None
+        and expr.payload.resolved_callee_symbol_id
+        and expr.payload.resolution_status == "resolved"
+    ):
+        summary = summaries.summary_for(expr.payload.resolved_callee_symbol_id)
+        if summary.may_return_nil is True:
+            return "unknown"
+        if summary.may_return_nil is False:
+            return "non_nil"
     return "unknown"
 
 

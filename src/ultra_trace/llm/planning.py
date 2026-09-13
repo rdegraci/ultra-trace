@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from pathlib import Path
 from typing import Any, Mapping
 
 from ultra_trace.config import UltraTraceConfig
@@ -10,7 +11,6 @@ from ultra_trace.llm.features import feature_enabled
 from ultra_trace.llm.models import ExplorationPlan, LLMRequest
 from ultra_trace.llm.privacy import AssistPolicy, sanitize_for_mode
 from ultra_trace.llm.provider import LLMProvider
-from ultra_trace.rules import DECLARED_RULES
 
 _JSON_BLOCK = re.compile(r"\{.*\}", re.DOTALL)
 
@@ -63,6 +63,8 @@ def clamp_plan(
 
     raw_rules = proposed.get("priority_rules", ())
     rules_in = [str(x) for x in raw_rules] if isinstance(raw_rules, list) else []
+    from ultra_trace.rules.ids import DECLARED_RULES
+
     known = set(DECLARED_RULES)
     priority = tuple(item for item in rules_in if item in known)
 
@@ -93,11 +95,41 @@ def parse_plan_text(text: str) -> dict[str, Any]:
     return data
 
 
+def plan_to_dict(plan: ExplorationPlan) -> dict[str, Any]:
+    return {
+        "plan_id": plan.plan_id,
+        "max_depth": plan.max_depth,
+        "focus_modules": list(plan.focus_modules),
+        "priority_rules": list(plan.priority_rules),
+        "source": plan.source,
+        "proposed_max_depth": plan.proposed_max_depth,
+    }
+
+
+def load_replay_plan(path: Path | str, cfg: UltraTraceConfig) -> ExplorationPlan:
+    """Load a previously recorded plan and clamp it to current config limits."""
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("replay plan JSON must be an object")
+    clamped = clamp_plan(payload, cfg, source="fallback")
+    plan_id = str(payload.get("plan_id") or clamped.plan_id)
+    return ExplorationPlan(
+        plan_id=plan_id,
+        max_depth=clamped.max_depth,
+        focus_modules=clamped.focus_modules,
+        priority_rules=clamped.priority_rules,
+        source="replay",
+        proposed_max_depth=clamped.proposed_max_depth,
+    )
+
+
 def request_plan(
     provider: LLMProvider,
     cfg: UltraTraceConfig,
     policy: AssistPolicy,
 ) -> ExplorationPlan:
+    from ultra_trace.rules.ids import DECLARED_RULES
+
     user = sanitize_for_mode(
         (
             f"Configured max_depth={cfg.max_depth}. "

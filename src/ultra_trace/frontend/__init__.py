@@ -55,9 +55,11 @@ from ultra_trace.frontend.models import (
     flatten_symbols,
 )
 from ultra_trace.frontend.summaries import (
+    BoundedCallSummaryProvider,
     FunctionSummary,
     FunctionSummaryProvider,
     LocalUnknownSummaryProvider,
+    make_summary_provider,
     summarize_local,
 )
 
@@ -109,6 +111,10 @@ __all__ = [
     "UnsupportedImpact",
     "VariableDeclPayload",
     "WrapperPayload",
+    "BoundedCallSummaryProvider",
+    "FunctionSummary",
+    "FunctionSummaryProvider",
+    "LocalUnknownSummaryProvider",
     "build_call_site_index",
     "classify_file",
     "classify_symbol",
@@ -116,5 +122,6 @@ __all__ = [
     "flatten_symbols",
     "index_from_records",
     "make_eligibility",
+    "make_summary_provider",
     "summarize_local",
 ]

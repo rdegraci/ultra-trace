@@ -7,13 +7,14 @@ from typing import Sequence
 
 from ultra_trace.cfg.builder import CFGBuilder
 from ultra_trace.cfg.models import ControlFlowGraph
-from ultra_trace.config import UltraTraceConfig
+from ultra_trace.config import CallSummaryConfig, UltraTraceConfig
 from ultra_trace.core.findings import Finding
 from ultra_trace.discovery.scanner import RepositoryFile, default_scanner
 from ultra_trace.engine.explorer import PathExplorer
 from ultra_trace.frontend.models import FrontendSymbol, FrontendUnit, flatten_symbols
-from ultra_trace.frontend.summaries import LocalUnknownSummaryProvider
-from ultra_trace.llm.models import LLMRunMetadata
+from ultra_trace.frontend.sdk_effects import SDKEffectCatalog
+from ultra_trace.frontend.summaries import make_summary_provider
+from ultra_trace.llm.models import ExplorationPlan, LLMRunMetadata
 from ultra_trace.llm.network import block_network
 from ultra_trace.llm.session import LLMSession
 from ultra_trace.parser.helper import invoke_helper
@@ -31,6 +32,7 @@ class AnalysisResult:
     graphs: tuple[ControlFlowGraph, ...]
     files_discovered: int
     llm: LLMRunMetadata | None = None
+    resolved_plan: ExplorationPlan | None = None
 
 
 def analyze_unit(
@@ -39,10 +41,21 @@ def analyze_unit(
     max_depth: int,
     files_discovered: int | None = None,
     taint_catalog: TaintCatalog | None = None,
+    call_summary: CallSummaryConfig | None = None,
+    sdk_catalog: SDKEffectCatalog | None = None,
 ) -> AnalysisResult:
     catalog = taint_catalog or TaintCatalog.starter()
+    summary_cfg = call_summary or CallSummaryConfig()
+    sdk = sdk_catalog
+    if summary_cfg.enabled and sdk is None:
+        sdk = SDKEffectCatalog.default()
     builder = CFGBuilder()
-    summaries = LocalUnknownSummaryProvider(dict(unit.symbols_by_id))
+    summaries = make_summary_provider(
+        unit,
+        enabled=summary_cfg.enabled,
+        max_depth=summary_cfg.max_depth,
+        sdk_catalog=sdk,
+    )
     explorer = PathExplorer(
         max_depth=max_depth, summaries=summaries, taint_catalog=catalog
     )
@@ -161,8 +174,13 @@ def _analyze_repository_inner(
             max_depth=plan.max_depth,
             files_discovered=0,
             taint_catalog=catalog,
+            call_summary=cfg.call_summary,
         )
-        return replace(result, llm=session.metadata_after(plan, result.findings))
+        return replace(
+            result,
+            llm=session.metadata_after(plan, result.findings),
+            resolved_plan=plan,
+        )
 
     helper = invoke_helper(
         repo_root=repo_root,
@@ -179,5 +197,10 @@ def _analyze_repository_inner(
         max_depth=plan.max_depth,
         files_discovered=len(discovered),
         taint_catalog=catalog,
+        call_summary=cfg.call_summary,
     )
-    return replace(result, llm=session.metadata_after(plan, result.findings))
+    return replace(
+        result,
+        llm=session.metadata_after(plan, result.findings),
+        resolved_plan=plan,
+    )

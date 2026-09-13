@@ -54,6 +54,10 @@ class LLMSession:
             self.provider = None
 
     def resolve_plan(self) -> ExplorationPlan:
+        if self.cfg.plan_replay_path:
+            from ultra_trace.llm.planning import load_replay_plan
+
+            return load_replay_plan(self.cfg.plan_replay_path, self.cfg)
         if not planning_allowed(self.policy) or self.provider is None:
             return default_plan(self.cfg)
         started = time.perf_counter()
