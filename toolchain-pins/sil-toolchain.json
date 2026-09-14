@@ -1,0 +1,8 @@
+{
+  "component": "sil-toolchain",
+  "role": "advanced_optional",
+  "expected_swiftc": "swiftc",
+  "expected_swift_version_prefix": "6.2",
+  "drift_policy": "warn",
+  "notes": "Advanced SIL exploration uses host swiftc (-emit-sil). Core CI must not fail when SIL is absent. Operators who enable analysisModes: [advanced] should run scripts/validate_sil_toolchain.py --require on Mac fleets. Pin prefix should track the same Swift family as toolchain-pins/parser-helper.json."
+}

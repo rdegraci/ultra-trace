@@ -20,7 +20,7 @@ Python-side pin file (authoritative for CI drift checks):
 3. **Helper binary stale** — invoking an old `swift-parser-helper` from `PATH` while Python expects a newer `helper_version` / `schema_version`.
 4. **Source location shifts** — trivia / view-mode changes across SwiftSyntax releases can move column numbers; golden fixtures should pin helper + syntax versions.
 
-## Build
+# Build
 
 ```bash
 cd swift-parser-helper
@@ -28,11 +28,25 @@ swift build -c release
 # binary: .build/release/swift-parser-helper
 ```
 
-Or from repo root:
+Or from repo root (Mac fleet / CI bootstrap):
 
 ```bash
+./scripts/bootstrap_macos_ci.sh
+# equivalent core pieces:
 ./scripts/build_parser_helper.sh
+python scripts/validate_parser_toolchain.py --fail-on-drift
+python scripts/validate_sil_toolchain.py   # optional; Core does not require SIL
 ```
+
+## Advanced SIL (optional)
+
+Advanced mode uses host `swiftc -emit-sil`. Soft pin:
+[`../toolchain-pins/sil-toolchain.json`](../toolchain-pins/sil-toolchain.json).
+
+- Core nightly CI must stay green when SIL is absent.
+- Fleets that enable `analysisModes: [advanced]` should run:
+  `python scripts/validate_sil_toolchain.py --require`
+- Configure an alternate toolchain with `advanced.silToolchainPath` in YAML.
 
 ## Invocation
 
