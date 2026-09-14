@@ -18,4 +18,13 @@ ADVANCED_RULE_IDS: tuple[str, ...] = (
     "swift.deep_taint_flow",
 )
 
-DECLARED_RULES: tuple[str, ...] = CORE_RULE_IDS + ADVANCED_RULE_IDS
+PYTHON_CORE_RULE_IDS: tuple[str, ...] = (
+    "python.none_attribute_risk",
+    "python.assert_risk",
+    "python.shallow_taint_flow",
+    "python.dead_branch_candidate",
+)
+
+DECLARED_RULES: tuple[str, ...] = (
+    CORE_RULE_IDS + ADVANCED_RULE_IDS + PYTHON_CORE_RULE_IDS
+)

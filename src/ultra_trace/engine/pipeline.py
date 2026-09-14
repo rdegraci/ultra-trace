@@ -20,9 +20,14 @@ from ultra_trace.llm.models import ExplorationPlan, LLMRunMetadata
 from ultra_trace.llm.network import block_network
 from ultra_trace.llm.session import LLMSession
 from ultra_trace.parser.helper import invoke_helper
-from ultra_trace.rules.pack import rules_for_packs
+from ultra_trace.rules.pack import rules_for_language
 from ultra_trace.swift_frontend import normalize_helper_output
 from ultra_trace.taint.catalog import TaintCatalog
+from ultra_trace.taint.defaults import (
+    STARTER_SANITIZER_PATTERNS,
+    STARTER_SINK_PATTERNS,
+    STARTER_SOURCE_PATTERNS,
+)
 
 
 @dataclass(frozen=True)
@@ -47,8 +52,11 @@ def analyze_unit(
     call_summary: CallSummaryConfig | None = None,
     sdk_catalog: SDKEffectCatalog | None = None,
     rule_packs: tuple[str, ...] = ("core",),
+    target_language: str = "swift",
 ) -> AnalysisResult:
-    catalog = taint_catalog or TaintCatalog.starter()
+    catalog = taint_catalog or (
+        TaintCatalog.python() if target_language == "python" else TaintCatalog.starter()
+    )
     summary_cfg = call_summary or CallSummaryConfig()
     sdk = sdk_catalog
     if summary_cfg.enabled and sdk is None:
@@ -63,7 +71,7 @@ def analyze_unit(
     explorer = PathExplorer(
         max_depth=max_depth, summaries=summaries, taint_catalog=catalog
     )
-    rules = rules_for_packs(rule_packs, catalog)
+    rules = rules_for_language(target_language, rule_packs, catalog)
     findings: list[Finding] = []
     graphs: list[ControlFlowGraph] = []
     path_count = 0
@@ -148,26 +156,41 @@ def _analyze_repository_inner(
     validate_helper: bool,
     fail_on_parser_drift: bool,
 ) -> AnalysisResult:
+    language = cfg.target_language
     scanner = default_scanner()
-    discovered = (
-        list(files)
-        if files is not None
-        else scanner.discover_swift_files(
+    if files is not None:
+        discovered = list(files)
+    elif language == "python":
+        from ultra_trace.discovery.scanner import PYTHON_EXCLUDES
+
+        excludes = cfg.exclude_paths
+        if excludes == UltraTraceConfig().exclude_paths:
+            excludes = PYTHON_EXCLUDES
+        discovered = scanner.discover_python_files(
+            repo_root,
+            include_paths=cfg.include_paths,
+            exclude_paths=excludes,
+        )
+    else:
+        discovered = scanner.discover_swift_files(
             repo_root,
             include_paths=cfg.include_paths,
             exclude_paths=cfg.exclude_paths,
         )
-    )
     session = LLMSession(cfg)
     plan = session.resolve_plan()
-    advanced_requested = "advanced" in cfg.analysis_modes
-    catalog = TaintCatalog.from_patterns(
-        sources=cfg.source_patterns,
-        sinks=cfg.sink_patterns,
-        sanitizers=cfg.sanitizer_patterns,
-    )
-    if "advanced" in cfg.rule_packs:
-        catalog = catalog.merged_with(TaintCatalog.advanced())
+    advanced_requested = "advanced" in cfg.analysis_modes and language == "swift"
+    catalog = _taint_catalog_for(cfg)
+    if language == "python":
+        return _analyze_python_repository(
+            repo_root,
+            cfg,
+            discovered=discovered,
+            session=session,
+            plan=plan,
+            catalog=catalog,
+        )
+
     if not discovered:
         empty = normalize_helper_output(
             {
@@ -183,6 +206,7 @@ def _analyze_repository_inner(
             taint_catalog=catalog,
             call_summary=cfg.call_summary,
             rule_packs=cfg.rule_packs,
+            target_language=language,
         )
         advanced = resolve_advanced_status(
             requested=advanced_requested,
@@ -214,6 +238,7 @@ def _analyze_repository_inner(
         taint_catalog=catalog,
         call_summary=cfg.call_summary,
         rule_packs=cfg.rule_packs,
+        target_language=language,
     )
     if advanced_requested:
         sil = run_sil_exploration(
@@ -248,4 +273,66 @@ def _analyze_repository_inner(
         result,
         llm=session.metadata_after(plan, result.findings),
         resolved_plan=plan,
+    )
+
+
+def _taint_catalog_for(cfg: UltraTraceConfig) -> TaintCatalog:
+    defaults = UltraTraceConfig()
+    using_swift_defaults = (
+        cfg.source_patterns == STARTER_SOURCE_PATTERNS
+        and cfg.sink_patterns == STARTER_SINK_PATTERNS
+        and cfg.sanitizer_patterns == STARTER_SANITIZER_PATTERNS
+    )
+    if cfg.target_language == "python" and using_swift_defaults:
+        catalog = TaintCatalog.python()
+    else:
+        catalog = TaintCatalog.from_patterns(
+            sources=cfg.source_patterns,
+            sinks=cfg.sink_patterns,
+            sanitizers=cfg.sanitizer_patterns,
+        )
+    if "advanced" in cfg.rule_packs and cfg.target_language == "swift":
+        catalog = catalog.merged_with(TaintCatalog.advanced())
+    del defaults
+    return catalog
+
+
+def _analyze_python_repository(
+    repo_root: Path,
+    cfg: UltraTraceConfig,
+    *,
+    discovered: list[RepositoryFile],
+    session: LLMSession,
+    plan: object,
+    catalog: TaintCatalog,
+) -> AnalysisResult:
+    from ultra_trace.llm.models import ExplorationPlan
+    from ultra_trace.python_frontend import normalize_python_sources
+
+    assert isinstance(plan, ExplorationPlan)
+    if not discovered:
+        unit = normalize_python_sources([], repo_root=repo_root)
+    else:
+        unit = normalize_python_sources(
+            [f.path for f in discovered],
+            repo_root=repo_root,
+        )
+    result = analyze_unit(
+        unit,
+        max_depth=plan.max_depth,
+        files_discovered=len(discovered),
+        taint_catalog=catalog,
+        call_summary=cfg.call_summary,
+        rule_packs=cfg.rule_packs,
+        target_language="python",
+    )
+    return replace(
+        result,
+        llm=session.metadata_after(plan, result.findings),
+        resolved_plan=plan,
+        advanced=resolve_advanced_status(
+            requested=False,
+            advanced_enabled=False,
+            sil_pipeline_ready=False,
+        ),
     )

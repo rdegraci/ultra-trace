@@ -12,6 +12,11 @@ from ultra_trace.taint.defaults import (
     STARTER_SINK_PATTERNS,
     STARTER_SOURCE_PATTERNS,
 )
+from ultra_trace.taint.python_defaults import (
+    PYTHON_SANITIZER_PATTERNS,
+    PYTHON_SINK_PATTERNS,
+    PYTHON_SOURCE_PATTERNS,
+)
 
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
@@ -28,6 +33,14 @@ class TaintCatalog:
             sources=STARTER_SOURCE_PATTERNS,
             sinks=STARTER_SINK_PATTERNS,
             sanitizers=STARTER_SANITIZER_PATTERNS,
+        )
+
+    @classmethod
+    def python(cls) -> TaintCatalog:
+        return cls(
+            sources=PYTHON_SOURCE_PATTERNS,
+            sinks=PYTHON_SINK_PATTERNS,
+            sanitizers=PYTHON_SANITIZER_PATTERNS,
         )
 
     @classmethod

@@ -1,8 +1,8 @@
 """Proof template preferences for Core (and later Advanced) rules.
 
 Maps rule IDs to preferred High/Critical proof shapes. Generators still decide
-whether an XCTest scaffold is justified for a given finding; this registry only
-encodes the intended preference order.
+whether an XCTest/pytest scaffold is justified for a given finding; this
+registry only encodes the intended preference order.
 """
 
 from __future__ import annotations
@@ -15,17 +15,10 @@ class ProofTemplate:
     """Preferred proof shape for a rule when severity is High/Critical."""
 
     rule_id: str
-    """Prefer ``xctest`` when a local crash harness is realistic."""
-
-    prefer_xctest: bool
-    """Kind used when XCTest is selected (Tier 1)."""
-
+    prefer_xctest: bool = False
+    prefer_pytest: bool = False
     xctest_kind: str = "xctest"
-    """Fallback kind for High when XCTest is not justified (Tier 2)."""
-
     high_fallback_kind: str = "repro_steps"
-    """Kind for Medium findings (Tier 3)."""
-
     medium_kind: str = "path_witness"
 
 
@@ -63,6 +56,25 @@ CORE_PROOF_TEMPLATES: dict[str, ProofTemplate] = {
         high_fallback_kind="path_witness",
         medium_kind="path_witness",
     ),
+    "python.none_attribute_risk": ProofTemplate(
+        rule_id="python.none_attribute_risk",
+        prefer_pytest=True,
+    ),
+    "python.assert_risk": ProofTemplate(
+        rule_id="python.assert_risk",
+        prefer_pytest=True,
+    ),
+    "python.shallow_taint_flow": ProofTemplate(
+        rule_id="python.shallow_taint_flow",
+        prefer_pytest=False,
+        high_fallback_kind="repro_steps",
+    ),
+    "python.dead_branch_candidate": ProofTemplate(
+        rule_id="python.dead_branch_candidate",
+        prefer_pytest=False,
+        high_fallback_kind="path_witness",
+        medium_kind="path_witness",
+    ),
 }
 
 
@@ -73,3 +85,8 @@ def template_for(rule_id: str) -> ProofTemplate | None:
 def prefers_xctest(rule_id: str) -> bool:
     template = template_for(rule_id)
     return bool(template and template.prefer_xctest)
+
+
+def prefers_pytest(rule_id: str) -> bool:
+    template = template_for(rule_id)
+    return bool(template and template.prefer_pytest)

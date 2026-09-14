@@ -14,6 +14,7 @@ from ultra_trace.appdir import bootstrap_user_environment
 from ultra_trace.config import (
     AnalysisMode,
     OutputFormat,
+    TargetLanguage,
     apply_cli_overrides,
     load_layered_config,
 )
@@ -56,6 +57,7 @@ _PRIVACY = {"offline", "redacted", "full-assist"}
 _FORMATS = {"markdown", "json"}
 _MODES = {"core", "advanced"}
 _PROVIDERS = {"anthropic", "openai", "openai-compatible"}
+_LANGUAGES = {"swift", "python"}
 
 
 def _configure_logging(verbose: bool, quiet: bool) -> None:
@@ -112,6 +114,9 @@ def analyze(
     model: Optional[str] = typer.Option(None, "--model"),
     base_url: Optional[str] = typer.Option(None, "--base-url"),
     analysis_mode: Optional[list[str]] = typer.Option(None, "--analysis-mode"),
+    target_language: Optional[str] = typer.Option(
+        None, "--target-language", help="swift (default) or python"
+    ),
     fail_on_partial_analysis: bool = typer.Option(False, "--fail-on-partial-analysis"),
     fail_on_parser_drift: bool = typer.Option(False, "--fail-on-parser-drift"),
     fail_on_advanced_unavailable: bool = typer.Option(
@@ -132,6 +137,8 @@ def analyze(
         raise typer.BadParameter(
             "--provider must be anthropic|openai|openai-compatible"
         )
+    if target_language is not None and target_language not in _LANGUAGES:
+        raise typer.BadParameter("--target-language must be swift or python")
     if config is not None and not config.is_file():
         typer.echo(f"configuration error: config not found: {config}", err=True)
         raise typer.Exit(code=EXIT_USAGE)
@@ -156,6 +163,10 @@ def analyze(
             raise typer.BadParameter("--analysis-mode must be core or advanced")
         modes = [m for m in analysis_mode if m in _MODES]  # type: ignore[misc]
 
+    lang: TargetLanguage | None = None
+    if target_language is not None:
+        lang = target_language  # type: ignore[assignment]
+
     cfg = apply_cli_overrides(
         cfg,
         max_depth=max_depth,
@@ -164,6 +175,7 @@ def analyze(
         privacy_mode=privacy_mode,  # type: ignore[arg-type]
         output_formats=formats,
         analysis_modes=modes,
+        target_language=lang,
         llm_enabled=True if llm_enabled else None,
         no_llm=no_llm,
         provider=provider,
@@ -178,6 +190,12 @@ def analyze(
         raise typer.Exit(code=EXIT_USAGE) from exc
 
     if "advanced" in cfg.analysis_modes and fail_on_advanced_unavailable:
+        if cfg.target_language != "swift":
+            typer.echo(
+                "Advanced mode requires --target-language swift.",
+                err=True,
+            )
+            raise typer.Exit(code=EXIT_FRONTEND)
         from ultra_trace.advanced.availability import resolve_advanced_status
         from ultra_trace.advanced.sil_extract import resolve_swiftc
 
@@ -197,12 +215,27 @@ def analyze(
             raise typer.Exit(code=EXIT_FRONTEND)
 
     scanner = default_scanner()
-    files = scanner.discover_swift_files(
-        repo_root,
-        include_paths=cfg.include_paths,
-        exclude_paths=cfg.exclude_paths,
-    )
-    logger.info("Discovered %d Swift file(s) under %s", len(files), repo_root)
+    if cfg.target_language == "python":
+        from ultra_trace.config import UltraTraceConfig as _Cfg
+        from ultra_trace.discovery.scanner import PYTHON_EXCLUDES
+
+        excludes = cfg.exclude_paths
+        if excludes == _Cfg().exclude_paths:
+            excludes = PYTHON_EXCLUDES
+        files = scanner.discover_python_files(
+            repo_root,
+            include_paths=cfg.include_paths,
+            exclude_paths=excludes,
+        )
+        label = "Python"
+    else:
+        files = scanner.discover_swift_files(
+            repo_root,
+            include_paths=cfg.include_paths,
+            exclude_paths=cfg.exclude_paths,
+        )
+        label = "Swift"
+    logger.info("Discovered %d %s file(s) under %s", len(files), label, repo_root)
 
     if dry_run:
         write_reports(
@@ -212,9 +245,10 @@ def analyze(
             repo_root=repo_root,
             files_discovered=len(files),
             dry_run=True,
+            analysis_target_language=cfg.target_language,
         )
         typer.echo(
-            f"Dry run: discovered {len(files)} Swift file(s); reports not written."
+            f"Dry run: discovered {len(files)} {label} file(s); reports not written."
         )
         return
 
@@ -223,7 +257,7 @@ def analyze(
             repo_root,
             cfg,
             files=files,
-            validate_helper=True,
+            validate_helper=cfg.target_language == "swift",
             fail_on_parser_drift=fail_on_parser_drift,
         )
     except HelperNotFoundError as exc:
@@ -254,6 +288,7 @@ def analyze(
         max_depth=cfg.max_depth,
         llm_enabled=cfg.llm.enabled,
         analysis_modes=cfg.analysis_modes,
+        analysis_target_language=cfg.target_language,
     )
     if written.markdown_path:
         typer.echo(f"Wrote {written.markdown_path}")
