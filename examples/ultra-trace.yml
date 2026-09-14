@@ -14,8 +14,9 @@
 
 analysisModes:
   - core
+  # Add `advanced` to run the SIL explorer (swiftc -emit-sil) with Core fallback.
 
-# Phase 4: add `advanced` to enable advanced rule pack (e.g. division-by-zero).
+# Phase 4: add `advanced` for overflow / IUO misuse / deep taint / div-by-zero.
 rulePacks:
   - core
 
@@ -52,6 +53,7 @@ swiftFrontend:
 
 advanced:
   enabled: false
+  # silToolchainPath: /path/to/Xcode.app/Contents/Developer/Toolchains/...
 
 callSummary:
   # Phase 5: set enabled true and maxDepth 1–2 for bounded callee summaries.
