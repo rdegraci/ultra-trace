@@ -26,6 +26,7 @@ from ultra_trace.frontend.models import (
     ForcedCastPayload,
     FrontendSymbol,
     IdentifierPayload,
+    MemberAccessPayload,
     NormalizedExpression,
     NormalizedStatement,
     SourceSpan,
@@ -101,6 +102,28 @@ class DivisionEvent:
 
 
 @dataclass(frozen=True)
+class ArithmeticEvent:
+    expression_id: str
+    location: SourceSpan
+    operator: str
+    left_const: str | None
+    right_const: str | None
+    overflow_proven: bool
+    path_node_ids: tuple[str, ...]
+    evidence: str = "core"
+
+
+@dataclass(frozen=True)
+class OptionalMisuseEvent:
+    expression_id: str
+    location: SourceSpan
+    operand_name: str | None
+    nilness: Nilness
+    kind: str
+    path_node_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class DeadBranchEvent:
     statement_id: str | None
     location: SourceSpan | None
@@ -126,6 +149,8 @@ class ExplorationResult:
     taint_sinks: tuple[TaintSinkEvent, ...] = ()
     dead_branches: tuple[DeadBranchEvent, ...] = ()
     divisions: tuple[DivisionEvent, ...] = ()
+    arithmetic: tuple[ArithmeticEvent, ...] = ()
+    optional_misuses: tuple[OptionalMisuseEvent, ...] = ()
 
 
 @dataclass
@@ -136,6 +161,8 @@ class _Acc:
     taint_sinks: list[TaintSinkEvent]
     dead_branches: list[DeadBranchEvent]
     divisions: list[DivisionEvent]
+    arithmetic: list[ArithmeticEvent]
+    optional_misuses: list[OptionalMisuseEvent]
 
 
 class PathExplorer:
@@ -162,7 +189,7 @@ class PathExplorer:
         exprs = expressions_by_id(symbol.body)
         initial = _initial_state(symbol)
         paths: list[ExploredPath] = []
-        acc = _Acc([], [], [], [], [], [])
+        acc = _Acc([], [], [], [], [], [], [], [])
         seen: set[tuple[str, tuple[object, ...]]] = set()
 
         def walk(
@@ -227,6 +254,8 @@ class PathExplorer:
             taint_sinks=tuple(acc.taint_sinks),
             dead_branches=tuple(acc.dead_branches),
             divisions=tuple(acc.divisions),
+            arithmetic=tuple(acc.arithmetic),
+            optional_misuses=tuple(acc.optional_misuses),
         )
 
     def _prune_dead(
@@ -411,6 +440,68 @@ class PathExplorer:
                             path_node_ids=trail,
                         )
                     )
+                if op in {"+", "-", "*"}:
+                    left_const = eval_const(
+                        expr.payload.left_expression_id, exprs, state
+                    )
+                    right_const = eval_const(
+                        expr.payload.right_expression_id, exprs, state
+                    )
+                    proven = _overflow_proven(op, left_const, right_const)
+                    if proven:
+                        acc.arithmetic.append(
+                            ArithmeticEvent(
+                                expression_id=expr.expression_id,
+                                location=expr.location,
+                                operator=op,
+                                left_const=left_const,
+                                right_const=right_const,
+                                overflow_proven=True,
+                                path_node_ids=trail,
+                                evidence="core",
+                            )
+                        )
+            if expr.kind == "member_access" and isinstance(
+                expr.payload, MemberAccessPayload
+            ):
+                base_name = ident_name(expr.payload.base_expression_id, exprs)
+                if base_name and state.is_iuo(base_name):
+                    nilness = state.get(base_name)
+                    if nilness in {"nil", "unknown"}:
+                        acc.optional_misuses.append(
+                            OptionalMisuseEvent(
+                                expression_id=expr.expression_id,
+                                location=expr.location,
+                                operand_name=base_name,
+                                nilness=nilness,
+                                kind="iuo_member_access",
+                                path_node_ids=trail,
+                            )
+                        )
+
+
+def _overflow_proven(op: str, left: str | None, right: str | None) -> bool:
+    if left is None or right is None:
+        return False
+    try:
+        a = int(left)
+        b = int(right)
+    except ValueError:
+        return False
+    limit = 2**63 - 1
+    low = -(2**63)
+    try:
+        if op == "+":
+            result = a + b
+        elif op == "-":
+            result = a - b
+        elif op == "*":
+            result = a * b
+        else:
+            return False
+    except OverflowError:
+        return True
+    return result > limit or result < low
 
 
 def _initial_state(symbol: FrontendSymbol) -> SymbolicState:
@@ -421,6 +512,9 @@ def _initial_state(symbol: FrontendSymbol) -> SymbolicState:
         ann = param.type_annotation or ""
         if ann.endswith("?"):
             state = state.with_nilness(param.local_name, "unknown")
+        elif ann.endswith("!"):
+            state = state.with_nilness(param.local_name, "unknown")
+            state = state.with_iuo(param.local_name)
         else:
             state = state.with_nilness(param.local_name, "non_nil")
     return state
@@ -447,6 +541,11 @@ def _apply_statement(
                     state = state.with_nilness(name, "nil")
                 else:
                     state = state.with_nilness(name, "unknown")
+            elif payload.type_annotation and payload.type_annotation.endswith("!"):
+                state = state.with_nilness(
+                    name, value if value != "unknown" else "unknown"
+                )
+                state = state.with_iuo(name)
             else:
                 state = state.with_nilness(
                     name, value if value != "unknown" else "non_nil"

@@ -5,6 +5,9 @@ from dataclasses import dataclass
 from typing import Sequence
 
 from ultra_trace.taint.defaults import (
+    ADVANCED_SANITIZER_PATTERNS,
+    ADVANCED_SINK_PATTERNS,
+    ADVANCED_SOURCE_PATTERNS,
     STARTER_SANITIZER_PATTERNS,
     STARTER_SINK_PATTERNS,
     STARTER_SOURCE_PATTERNS,
@@ -28,6 +31,16 @@ class TaintCatalog:
         )
 
     @classmethod
+    def advanced(cls) -> TaintCatalog:
+        return cls(
+            sources=_dedupe(STARTER_SOURCE_PATTERNS + ADVANCED_SOURCE_PATTERNS),
+            sinks=_dedupe(STARTER_SINK_PATTERNS + ADVANCED_SINK_PATTERNS),
+            sanitizers=_dedupe(
+                STARTER_SANITIZER_PATTERNS + ADVANCED_SANITIZER_PATTERNS
+            ),
+        )
+
+    @classmethod
     def from_patterns(
         cls,
         *,
@@ -45,6 +58,13 @@ class TaintCatalog:
             ),
         )
 
+    def merged_with(self, other: TaintCatalog) -> TaintCatalog:
+        return TaintCatalog(
+            sources=_dedupe(self.sources + other.sources),
+            sinks=_dedupe(self.sinks + other.sinks),
+            sanitizers=_dedupe(self.sanitizers + other.sanitizers),
+        )
+
     def match_source(self, text: str) -> str | None:
         return _first_match(text, self.sources)
 
@@ -56,6 +76,17 @@ class TaintCatalog:
 
     def is_empty(self) -> bool:
         return not self.sources or not self.sinks
+
+
+def _dedupe(items: Sequence[str]) -> tuple[str, ...]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        out.append(item)
+    return tuple(out)
 
 
 def _first_match(text: str, patterns: Sequence[str]) -> str | None:

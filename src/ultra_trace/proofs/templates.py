@@ -43,6 +43,10 @@ CORE_PROOF_TEMPLATES: dict[str, ProofTemplate] = {
         rule_id="swift.forced_cast_risk",
         prefer_xctest=True,
     ),
+    "swift.optional_misuse_risk": ProofTemplate(
+        rule_id="swift.optional_misuse_risk",
+        prefer_xctest=True,
+    ),
     "swift.array_bounds_risk": ProofTemplate(
         rule_id="swift.array_bounds_risk",
         prefer_xctest=False,

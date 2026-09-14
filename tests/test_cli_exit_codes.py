@@ -93,6 +93,14 @@ def test_fail_on_advanced_unavailable_exit_4(
     tmp_path: Path, monkeypatch: object
 ) -> None:
     _appdir(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        "ultra_trace.advanced.sil_extract.resolve_swiftc",
+        lambda **kwargs: None,
+    )
+    monkeypatch.setattr(
+        "ultra_trace.advanced.availability.probe_sil_toolchain",
+        lambda **kwargs: (False, None, None),
+    )
     repo = tmp_path / "repo"
     repo.mkdir()
     result = runner.invoke(

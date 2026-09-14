@@ -16,12 +16,16 @@ class SymbolicState:
     nonempty: frozenset[str] = field(default_factory=frozenset)
     array_sizes: Mapping[str, int] = field(default_factory=dict)
     type_is: Mapping[str, str] = field(default_factory=dict)
+    iuo_names: frozenset[str] = field(default_factory=frozenset)
 
     def get(self, name: str) -> Nilness:
         return self.nilness.get(name, "unknown")
 
     def taint_of(self, name: str) -> frozenset[str]:
         return self.taint.get(name, frozenset())
+
+    def is_iuo(self, name: str) -> bool:
+        return name in self.iuo_names
 
     def with_nilness(self, name: str, value: Nilness) -> SymbolicState:
         updated = dict(self.nilness)
@@ -57,6 +61,9 @@ class SymbolicState:
         updated[name] = type_name
         return replace(self, type_is=updated)
 
+    def with_iuo(self, name: str) -> SymbolicState:
+        return replace(self, iuo_names=self.iuo_names | {name})
+
     def fingerprint(self) -> tuple[object, ...]:
         return (
             tuple(sorted(self.nilness.items())),
@@ -66,4 +73,5 @@ class SymbolicState:
             tuple(sorted(self.nonempty)),
             tuple(sorted(self.array_sizes.items())),
             tuple(sorted(self.type_is.items())),
+            tuple(sorted(self.iuo_names)),
         )

@@ -179,14 +179,16 @@ def analyze(
 
     if "advanced" in cfg.analysis_modes and fail_on_advanced_unavailable:
         from ultra_trace.advanced.availability import resolve_advanced_status
+        from ultra_trace.advanced.sil_extract import resolve_swiftc
 
+        swiftc = resolve_swiftc(sil_toolchain_path=cfg.advanced.sil_toolchain_path)
         status = resolve_advanced_status(
             requested=True,
             advanced_enabled=True,
             sil_toolchain_path=cfg.advanced.sil_toolchain_path,
-            sil_pipeline_ready=False,
+            sil_pipeline_ready=True,
         )
-        if not status.ran:
+        if swiftc is None or not status.sil_available:
             reason = status.fallback_reason or "advanced_unavailable"
             typer.echo(
                 f"Advanced mode was requested but is unavailable ({reason}).",

@@ -45,3 +45,56 @@ STARTER_SANITIZER_PATTERNS: tuple[str, ...] = (
     "escaped",
     "sanitized",
 )
+
+# Advanced pack expansions (merged on top of starter catalogs).
+ADVANCED_SOURCE_PATTERNS: tuple[str, ...] = (
+    "UIPasteboard.general.string",
+    "UIPasteboard.string",
+    "CNContact",
+    "CLLocation",
+    "CMMotionManager",
+    "AVCapture",
+    "HKHealthStore",
+    "SecItemCopyMatching",
+    "LAContext",
+    "ASWebAuthenticationSession",
+    "NFCNDEFReaderSession",
+)
+
+ADVANCED_SINK_PATTERNS: tuple[str, ...] = (
+    "Process.launchPath",
+    "Process.arguments",
+    "NSTask.launch",
+    "NSTask.launchPath",
+    "sqlite3_exec",
+    "FMDatabase.executeUpdate",
+    "executeUpdate",
+    "executeQuery",
+    "JSContext.evaluateScript",
+    "evaluateScript",
+    "CNContactStore.enumerateContacts",
+    "UIApplication.open",
+    "openURL",
+)
+
+ADVANCED_SANITIZER_PATTERNS: tuple[str, ...] = (
+    "CharacterSet.urlQueryAllowed",
+    "whitelisted",
+    "allowList",
+    "allowlisted",
+    "validated",
+    "canonicalize",
+    "pathExtension",
+    "deletingLastPathComponent",
+    "SQL escape",
+    "sqlite3_bind",
+)
+
+CRITICAL_SINK_PATTERNS: tuple[str, ...] = (
+    "evaluateJavaScript",
+    "JSContext.evaluateScript",
+    "evaluateScript",
+    "Process.launchPath",
+    "NSTask.launch",
+    "sqlite3_exec",
+)

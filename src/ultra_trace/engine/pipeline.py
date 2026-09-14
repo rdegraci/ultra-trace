@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Sequence
 
 from ultra_trace.advanced.availability import AdvancedStatus, resolve_advanced_status
+from ultra_trace.advanced.sil_explorer import run_sil_exploration
 from ultra_trace.cfg.builder import CFGBuilder
 from ultra_trace.cfg.models import ControlFlowGraph
 from ultra_trace.config import CallSummaryConfig, UltraTraceConfig
@@ -159,17 +160,14 @@ def _analyze_repository_inner(
     )
     session = LLMSession(cfg)
     plan = session.resolve_plan()
-    advanced = resolve_advanced_status(
-        requested="advanced" in cfg.analysis_modes,
-        advanced_enabled=cfg.advanced.enabled or ("advanced" in cfg.analysis_modes),
-        sil_toolchain_path=cfg.advanced.sil_toolchain_path,
-        sil_pipeline_ready=False,
-    )
+    advanced_requested = "advanced" in cfg.analysis_modes
     catalog = TaintCatalog.from_patterns(
         sources=cfg.source_patterns,
         sinks=cfg.sink_patterns,
         sanitizers=cfg.sanitizer_patterns,
     )
+    if "advanced" in cfg.rule_packs:
+        catalog = catalog.merged_with(TaintCatalog.advanced())
     if not discovered:
         empty = normalize_helper_output(
             {
@@ -185,6 +183,12 @@ def _analyze_repository_inner(
             taint_catalog=catalog,
             call_summary=cfg.call_summary,
             rule_packs=cfg.rule_packs,
+        )
+        advanced = resolve_advanced_status(
+            requested=advanced_requested,
+            advanced_enabled=cfg.advanced.enabled or advanced_requested,
+            sil_toolchain_path=cfg.advanced.sil_toolchain_path,
+            sil_pipeline_ready=True,
         )
         return replace(
             result,
@@ -211,9 +215,37 @@ def _analyze_repository_inner(
         call_summary=cfg.call_summary,
         rule_packs=cfg.rule_packs,
     )
+    if advanced_requested:
+        sil = run_sil_exploration(
+            unit=unit,
+            source_files=[repo_root / f.path for f in discovered],
+            requested=True,
+            advanced_enabled=cfg.advanced.enabled or True,
+            sil_toolchain_path=cfg.advanced.sil_toolchain_path,
+        )
+        findings = tuple(
+            sorted(
+                (*result.findings, *sil.findings),
+                key=lambda f: (
+                    f.location.file_path,
+                    f.location.start_line,
+                    f.location.start_column,
+                    f.id,
+                ),
+            )
+        )
+        result = replace(result, findings=findings, advanced=sil.status)
+    else:
+        result = replace(
+            result,
+            advanced=resolve_advanced_status(
+                requested=False,
+                advanced_enabled=False,
+                sil_pipeline_ready=True,
+            ),
+        )
     return replace(
         result,
         llm=session.metadata_after(plan, result.findings),
         resolved_plan=plan,
-        advanced=advanced,
     )

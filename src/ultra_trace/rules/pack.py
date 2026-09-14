@@ -3,10 +3,13 @@ from __future__ import annotations
 from ultra_trace.rules.array_bounds import ArrayBoundsRiskRule
 from ultra_trace.rules.base import Rule
 from ultra_trace.rules.dead_branch import DeadBranchCandidateRule
+from ultra_trace.rules.deep_taint import DeepTaintFlowRule
 from ultra_trace.rules.division_by_zero import DivisionByZeroRiskRule
 from ultra_trace.rules.force_unwrap import ForceUnwrapRiskRule
 from ultra_trace.rules.forced_cast import ForcedCastRiskRule
 from ultra_trace.rules.ids import ADVANCED_RULE_IDS, CORE_RULE_IDS
+from ultra_trace.rules.integer_overflow import IntegerOverflowRiskRule
+from ultra_trace.rules.optional_misuse import OptionalMisuseRiskRule
 from ultra_trace.rules.shallow_taint import ShallowTaintFlowRule
 from ultra_trace.rules.try_bang import TryBangRiskRule
 from ultra_trace.taint.catalog import TaintCatalog
@@ -33,8 +36,17 @@ def core_rules(catalog: TaintCatalog | None = None) -> tuple[Rule, ...]:
 
 
 def advanced_rules(catalog: TaintCatalog | None = None) -> tuple[Rule, ...]:
-    del catalog
-    return (DivisionByZeroRiskRule(),)
+    taint = (
+        catalog.merged_with(TaintCatalog.advanced())
+        if catalog
+        else TaintCatalog.advanced()
+    )
+    return (
+        DivisionByZeroRiskRule(),
+        IntegerOverflowRiskRule(),
+        OptionalMisuseRiskRule(),
+        DeepTaintFlowRule(taint),
+    )
 
 
 def rules_for_packs(
