@@ -4,6 +4,7 @@ from pathlib import Path
 
 from ultra_trace.discovery.scanner import (
     DEFAULT_EXCLUDES,
+    PYTHON_EXCLUDES,
     RipgrepRepositoryScanner,
     path_is_excluded,
 )
@@ -56,3 +57,8 @@ def test_include_and_custom_exclude(tmp_path: Path) -> None:
         "Sources/A.swift",
         "Sources/B.swift",
     ]
+
+
+def test_python_excludes_constant_present() -> None:
+    assert ".venv" in PYTHON_EXCLUDES
+    assert "__pycache__" in PYTHON_EXCLUDES

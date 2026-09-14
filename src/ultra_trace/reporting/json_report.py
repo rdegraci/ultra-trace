@@ -192,6 +192,7 @@ def report_json(
     llm_enabled: bool = False,
     analysis_modes: Sequence[str] = ("core",),
     resolved_plan_id: str = "default-offline",
+    analysis_target_language: str = "swift",
 ) -> dict[str, object]:
     unit = result.unit
     stamp = generated_at or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -230,7 +231,7 @@ def report_json(
             "name": "ultra-trace",
             "version": __version__,
             "implementation_language": "python",
-            "analysis_target_language": "swift",
+            "analysis_target_language": analysis_target_language,
         },
         "analysis": {
             "repository_root": str(repo_root),

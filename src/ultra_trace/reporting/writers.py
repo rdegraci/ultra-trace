@@ -31,6 +31,7 @@ def report_markdown(
     max_depth: int = 12,
     llm_enabled: bool = False,
     analysis_modes: Sequence[str] = ("core",),
+    analysis_target_language: str = "swift",
 ) -> str:
     payload = report_json(
         result,
@@ -41,6 +42,7 @@ def report_markdown(
         max_depth=max_depth,
         llm_enabled=llm_enabled,
         analysis_modes=analysis_modes,
+        analysis_target_language=analysis_target_language,
     )
     return markdown_from_payload(payload)
 
@@ -60,6 +62,7 @@ def write_reports(
     max_depth: int = 12,
     llm_enabled: bool = False,
     analysis_modes: Sequence[str] = ("core",),
+    analysis_target_language: str = "swift",
 ) -> ReportWriteResult:
     output_dir.mkdir(parents=True, exist_ok=True)
     md_path: Path | None = None
@@ -91,6 +94,7 @@ def write_reports(
         max_depth=max_depth,
         llm_enabled=llm_enabled,
         analysis_modes=analysis_modes,
+        analysis_target_language=analysis_target_language,
     )
 
     if "markdown" in formats:

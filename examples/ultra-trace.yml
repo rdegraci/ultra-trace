@@ -20,6 +20,9 @@ analysisModes:
 rulePacks:
   - core
 
+# Phase 6: set to `python` for Python AST analysis (skips Swift helper/SIL).
+targetLanguage: swift
+
 privacyMode: offline
 
 llm:

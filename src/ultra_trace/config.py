@@ -18,6 +18,7 @@ SeverityLevel = Literal["low", "medium", "high", "critical"]
 OutputFormat = Literal["markdown", "json"]
 AnalysisMode = Literal["core", "advanced"]
 RulePack = Literal["core", "advanced"]
+TargetLanguage = Literal["swift", "python"]
 
 
 @dataclass(frozen=True)
@@ -73,6 +74,7 @@ class UltraTraceConfig:
     focus_modules: tuple[str, ...] = ()
     analysis_modes: tuple[AnalysisMode, ...] = ("core",)
     rule_packs: tuple[RulePack, ...] = ("core",)
+    target_language: TargetLanguage = "swift"
     severity_threshold: SeverityLevel = "medium"
     proof_mode: str = "mixed"
     output_formats: tuple[OutputFormat, ...] = ("markdown", "json")
@@ -94,6 +96,7 @@ _CAMEL_TO_SNAKE = {
     "focusModules": "focus_modules",
     "analysisModes": "analysis_modes",
     "rulePacks": "rule_packs",
+    "targetLanguage": "target_language",
     "severityThreshold": "severity_threshold",
     "proofMode": "proof_mode",
     "outputFormats": "output_formats",
@@ -267,6 +270,7 @@ def apply_cli_overrides(
     privacy_mode: PrivacyMode | None = None,
     output_formats: Sequence[OutputFormat] | None = None,
     analysis_modes: Sequence[AnalysisMode] | None = None,
+    target_language: TargetLanguage | None = None,
     llm_enabled: bool | None = None,
     no_llm: bool = False,
     provider: str | None = None,
@@ -300,6 +304,9 @@ def apply_cli_overrides(
         ),
         analysis_modes=(
             cfg.analysis_modes if analysis_modes is None else tuple(analysis_modes)
+        ),
+        target_language=(
+            cfg.target_language if target_language is None else target_language
         ),
         llm=llm,
     )
