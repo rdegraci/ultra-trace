@@ -17,6 +17,7 @@ def test_help(tmp_path: Path, monkeypatch: object) -> None:
     assert "analyze" in result.stdout
     assert "explore" in result.stdout
     assert "repl" in result.stdout
+    assert "serve" in result.stdout
     assert "report" in result.stdout
     assert "list-rules" in result.stdout
 

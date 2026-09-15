@@ -49,7 +49,7 @@ from ultra_trace.rules import DECLARED_RULES, IMPLEMENTED_RULES
 
 app = typer.Typer(
     name="ultra-trace",
-    help="Ultra-Trace static analysis CLI (explore, repl, analyze).",
+    help="Ultra-Trace static analysis CLI (explore, repl, serve, analyze).",
     no_args_is_help=True,
     add_completion=False,
 )
@@ -621,6 +621,134 @@ def repl_cmd(
 
     code = run_repl(session)
     raise typer.Exit(code=code)
+
+
+@app.command("serve")
+def serve_cmd(
+    repo_root: Path = typer.Option(
+        Path.cwd(),
+        "--repo-root",
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+        readable=True,
+        resolve_path=True,
+        help="Repository root for the serve session",
+    ),
+    config: Optional[Path] = typer.Option(
+        None, "--config", help="Project config YAML path"
+    ),
+    output_dir: Path = typer.Option(
+        Path.cwd(), "--output-dir", help="Default directory for export"
+    ),
+    output_basename: str = typer.Option(
+        "ultra-trace-serve-report",
+        "--output-basename",
+        help="Report basename for export",
+    ),
+    format: Optional[list[str]] = typer.Option(
+        None, "--format", help="Repeatable: markdown|json|sarif"
+    ),
+    max_depth: Optional[int] = typer.Option(None, "--max-depth"),
+    focus_module: Optional[list[str]] = typer.Option(None, "--focus-module"),
+    severity_threshold: Optional[str] = typer.Option(None, "--severity-threshold"),
+    privacy_mode: Optional[str] = typer.Option(None, "--privacy-mode"),
+    llm_enabled: bool = typer.Option(False, "--llm-enabled"),
+    no_llm: bool = typer.Option(False, "--no-llm"),
+    provider: Optional[str] = typer.Option(None, "--provider"),
+    model: Optional[str] = typer.Option(None, "--model"),
+    base_url: Optional[str] = typer.Option(None, "--base-url"),
+    analysis_mode: Optional[list[str]] = typer.Option(None, "--analysis-mode"),
+    target_language: Optional[str] = typer.Option(
+        None, "--target-language", help="swift (default) or python"
+    ),
+    fail_on_parser_drift: bool = typer.Option(False, "--fail-on-parser-drift"),
+    fail_on_advanced_unavailable: bool = typer.Option(
+        False, "--fail-on-advanced-unavailable"
+    ),
+    port: int = typer.Option(
+        8765,
+        "--port",
+        min=1,
+        max=65535,
+        help="Loopback TCP port (default 8765)",
+    ),
+    no_open: bool = typer.Option(False, "--no-open", help="Do not open a browser"),
+) -> None:
+    """Local Bootstrap UI over a warm explore session (127.0.0.1 only)."""
+    from ultra_trace.repl.session import warm_repl_session
+    from ultra_trace.serve.app import run_uvicorn
+
+    formats, modes, lang = _validate_scan_options(
+        llm_enabled=llm_enabled,
+        no_llm=no_llm,
+        severity_threshold=severity_threshold,
+        privacy_mode=privacy_mode,
+        provider=provider,
+        target_language=target_language,
+        config=config,
+        format=format,
+        analysis_mode=analysis_mode,
+    )
+    cfg = _prepare_scan_config(
+        repo_root=repo_root,
+        config=config,
+        explore=True,
+        max_depth=max_depth,
+        focus_module=focus_module,
+        severity_threshold=severity_threshold,
+        privacy_mode=privacy_mode,
+        formats=formats,
+        modes=modes,
+        lang=lang,
+        llm_enabled=llm_enabled,
+        no_llm=no_llm,
+        provider=provider,
+        model=model,
+        base_url=base_url,
+    )
+    _enforce_advanced_availability(
+        cfg, fail_on_advanced_unavailable=fail_on_advanced_unavailable
+    )
+    try:
+        session = warm_repl_session(
+            repo_root=repo_root,
+            cfg=cfg,
+            output_dir=output_dir,
+            output_basename=output_basename,
+            fail_on_parser_drift=fail_on_parser_drift,
+            environ=dict(os.environ),
+        )
+    except HelperNotFoundError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=EXIT_FRONTEND) from exc
+    except HelperVersionError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=EXIT_FRONTEND) from exc
+    except (HelperInvocationError, HelperTimeoutError) as exc:
+        typer.echo(f"internal analyzer failure: {exc}", err=True)
+        raise typer.Exit(code=EXIT_INTERNAL) from exc
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Internal analyzer failure during serve warm")
+        typer.echo(f"internal analyzer failure: {exc}", err=True)
+        raise typer.Exit(code=EXIT_INTERNAL) from exc
+
+    typer.echo(
+        "Assist mode: LLM advisory only. Analyzer owns findings, severity, and proofs."
+    )
+    try:
+        run_uvicorn(
+            session,
+            host="127.0.0.1",
+            port=port,
+            open_browser=not no_open,
+        )
+    except ImportError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=EXIT_USAGE) from exc
+    except ValueError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=EXIT_USAGE) from exc
 
 
 @app.command("report")

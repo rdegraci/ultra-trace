@@ -23,6 +23,14 @@ dev = [
   "mypy>=1.8",
   "types-PyYAML>=6.0",
   "ruff>=0.9",
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "httpx>=0.27",
+]
+serve = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "httpx>=0.27",
 ]
 
 [project.scripts]
@@ -36,6 +44,8 @@ ultra_trace = [
   "data/config.yaml.example",
   "data/dot_env.example",
   "data/sdk_effects.json",
+  "serve/static/*",
+  "serve/static/vendor/*",
 ]
 
 [tool.pytest.ini_options]

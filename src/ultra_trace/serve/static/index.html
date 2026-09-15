@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ultra-Trace</title>
+    <link rel="stylesheet" href="/vendor/bootstrap.min.css" />
+    <style>
+      :root {
+        --ut-ink: #1a2332;
+        --ut-paper: #f3efe6;
+        --ut-accent: #0b6e4f;
+        --ut-line: #cfc6b6;
+      }
+      body {
+        background: linear-gradient(160deg, #ebe4d6 0%, var(--ut-paper) 45%, #e7eef0 100%);
+        color: var(--ut-ink);
+        min-height: 100vh;
+      }
+      .ut-brand {
+        font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        font-size: clamp(2rem, 4vw, 3rem);
+        letter-spacing: -0.02em;
+        color: var(--ut-ink);
+      }
+      .ut-banner {
+        border-left: 4px solid var(--ut-accent);
+        background: rgba(255, 255, 255, 0.65);
+      }
+      .list-group-item.active {
+        background-color: var(--ut-accent);
+        border-color: var(--ut-accent);
+      }
+      .ut-panel {
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid var(--ut-line);
+      }
+      #advisoryOut {
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container py-4">
+      <header class="mb-4">
+        <h1 class="ut-brand mb-2">Ultra-Trace</h1>
+        <p id="statusLine" class="text-secondary mb-3">Loading session…</p>
+        <div id="banner" class="ut-banner p-3 mb-3" role="status"></div>
+        <div class="d-flex flex-wrap gap-2">
+          <button type="button" class="btn btn-success" id="btnExport">Export</button>
+          <button type="button" class="btn btn-outline-secondary" id="btnReload">Reload</button>
+          <button type="button" class="btn btn-outline-secondary" id="btnSummary">Summary</button>
+          <button type="button" class="btn btn-outline-secondary" id="btnCandidates">Candidates</button>
+        </div>
+      </header>
+
+      <div class="row g-4">
+        <div class="col-lg-5">
+          <div class="ut-panel rounded p-3 h-100">
+            <h2 class="h5">Findings</h2>
+            <div id="findingsList" class="list-group list-group-flush"></div>
+          </div>
+        </div>
+        <div class="col-lg-7">
+          <div class="ut-panel rounded p-3 mb-3">
+            <h2 class="h5">Detail</h2>
+            <div id="detailPane" class="text-secondary">Select a finding.</div>
+            <div class="mt-3">
+              <button type="button" class="btn btn-sm btn-outline-success" id="btnWhy" disabled>
+                Why
+              </button>
+            </div>
+          </div>
+          <div class="ut-panel rounded p-3">
+            <h2 class="h5">Ask</h2>
+            <form id="askForm" class="mb-3">
+              <div class="input-group">
+                <input
+                  type="text"
+                  class="form-control"
+                  id="askInput"
+                  placeholder="why is this nil?"
+                  autocomplete="off"
+                />
+                <button class="btn btn-success" type="submit">Ask</button>
+              </div>
+            </form>
+            <div id="advisoryOut" class="small"></div>
+            <hr />
+            <form id="traceForm" class="row g-2 align-items-center">
+              <div class="col-auto">
+                <label class="col-form-label" for="traceInput">Trace</label>
+              </div>
+              <div class="col">
+                <input type="text" class="form-control" id="traceInput" placeholder="SymbolName" />
+              </div>
+              <div class="col-auto">
+                <button class="btn btn-outline-secondary" type="submit">Go</button>
+              </div>
+            </form>
+            <pre id="traceOut" class="small mt-3 mb-0"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="/vendor/bootstrap.bundle.min.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

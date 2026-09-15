@@ -55,5 +55,6 @@ and proofs. Ask turns are capped per session.
 
 ## Related
 
+- Local browser UI: [OPERATOR-SERVE-GUIDE.md](OPERATOR-SERVE-GUIDE.md)
 - One-shot assist: [OPERATOR-EXPLORE-GUIDE.md](OPERATOR-EXPLORE-GUIDE.md)
 - CI gate: [OPERATOR-CI-GUIDE.md](OPERATOR-CI-GUIDE.md)
