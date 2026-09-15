@@ -64,6 +64,8 @@ the repo root as `ultra-trace.yml`, or pass `--config`. Assist profile:
 
 ## Explore (day-to-day assist)
 
+Operator runbook: [`docs/OPERATOR-EXPLORE-GUIDE.md`](docs/OPERATOR-EXPLORE-GUIDE.md).
+
 Human-first tracing. Built-in assist defaults: `privacyMode: redacted`, LLM on
 (planning, advisory wording, candidates), call summaries on (`maxDepth: 1`).
 Same analysis engine as `analyze`. Soft exit: `0` unless you pass
@@ -84,6 +86,8 @@ Reports default to basename `ultra-trace-explore-report`. Assist is advisory onl
 the analyzer owns findings, severity, and proofs.
 
 ## Analyze offline (CI / nightly)
+
+Operator runbook: [`docs/OPERATOR-CI-GUIDE.md`](docs/OPERATOR-CI-GUIDE.md).
 
 Core only, `privacyMode: offline`, LLM off. No network, no key. Defaults are
 unchanged from prior releases.
