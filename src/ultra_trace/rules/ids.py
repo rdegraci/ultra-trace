@@ -26,5 +26,8 @@ PYTHON_CORE_RULE_IDS: tuple[str, ...] = (
 )
 
 DECLARED_RULES: tuple[str, ...] = (
-    CORE_RULE_IDS + ADVANCED_RULE_IDS + PYTHON_CORE_RULE_IDS
+    CORE_RULE_IDS
+    + ADVANCED_RULE_IDS
+    + PYTHON_CORE_RULE_IDS
+    + ("llm.proposed_candidate",)
 )

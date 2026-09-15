@@ -29,8 +29,13 @@ _SEV_RANK = {"low": 0, "medium": 1, "high": 2, "critical": 3}
 
 
 def findings_meet_threshold(findings: Sequence[Finding], threshold: str) -> bool:
+    from ultra_trace.llm.candidates import is_llm_proposed
+
     floor = _SEV_RANK.get(threshold, 1)
-    return any(_SEV_RANK.get(f.severity, 0) >= floor for f in findings)
+    return any(
+        not is_llm_proposed(f) and _SEV_RANK.get(f.severity, 0) >= floor
+        for f in findings
+    )
 
 
 def exit_for_analysis(

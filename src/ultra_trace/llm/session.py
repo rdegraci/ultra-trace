@@ -7,7 +7,9 @@ from typing import Mapping
 
 from ultra_trace.config import UltraTraceConfig
 from ultra_trace.core.findings import Finding
+from ultra_trace.frontend.models import FrontendUnit
 from ultra_trace.llm.advisory import request_finding_wording, request_report_summary
+from ultra_trace.llm.candidates import request_candidate_findings
 from ultra_trace.llm.errors import LLMRequestError
 from ultra_trace.llm.factory import select_provider
 from ultra_trace.llm.features import feature_enabled
@@ -30,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 class LLMSession:
-    """Runs advisory LLM workflows. Never mutates findings or proof support."""
+    """Runs advisory LLM workflows. Never mutates analyzer findings or proofs."""
 
     def __init__(
         self,
@@ -53,7 +55,7 @@ class LLMSession:
         else:
             self.provider = None
 
-    def resolve_plan(self) -> ExplorationPlan:
+    def resolve_plan(self, *, unit: FrontendUnit | None = None) -> ExplorationPlan:
         if self.cfg.plan_replay_path:
             from ultra_trace.llm.planning import load_replay_plan
 
@@ -62,7 +64,7 @@ class LLMSession:
             return default_plan(self.cfg)
         started = time.perf_counter()
         try:
-            plan = request_plan(self.provider, self.cfg, self.policy)
+            plan = request_plan(self.provider, self.cfg, self.policy, unit=unit)
         except (LLMRequestError, ValueError, TypeError, json.JSONDecodeError) as exc:
             self.fallback_reason = type(exc).__name__
             logger.warning("LLM planning failed; using default plan")
@@ -90,9 +92,13 @@ class LLMSession:
         self,
         plan: ExplorationPlan,
         findings: tuple[Finding, ...],
-    ) -> LLMRunMetadata:
+        *,
+        unit: FrontendUnit | None = None,
+    ) -> tuple[LLMRunMetadata, tuple[Finding, ...]]:
+        """Return metadata plus optional non-gating LLM candidate findings."""
         advisory: dict[str, tuple[AdvisoryItem, ...]] = {}
         summary: str | None = None
+        proposed: tuple[Finding, ...] = ()
         if self.policy.active and self.provider is not None:
             if any(
                 feature_enabled(self.policy.features, name)
@@ -138,11 +144,29 @@ class LLMSession:
                     self._record(
                         "report_summary", False, type(exc).__name__, started, 0, 0
                     )
+            if feature_enabled(self.policy.features, "candidate_proposals"):
+                started = time.perf_counter()
+                try:
+                    proposed = request_candidate_findings(
+                        self.provider, findings, self.policy, unit=unit
+                    )
+                    self._record("candidate_proposals", True, None, started, 0, 0)
+                    self._features_used.append("candidate_proposals")
+                except (LLMRequestError, ValueError, TypeError) as exc:
+                    logger.warning("LLM candidate proposals failed")
+                    self._record(
+                        "candidate_proposals",
+                        False,
+                        type(exc).__name__,
+                        started,
+                        0,
+                        0,
+                    )
 
         provider_name = self.provider.name if self.provider else None
         model = self.provider.model if self.provider else None
         used = tuple(dict.fromkeys(self._features_used))
-        return LLMRunMetadata(
+        meta = LLMRunMetadata(
             enabled=self.policy.active,
             provider=provider_name if self.policy.active else None,
             model=model if self.policy.active else None,
@@ -155,6 +179,7 @@ class LLMSession:
             fallback_reason=self.fallback_reason,
             invocations=tuple(self._invocations),
         )
+        return meta, proposed
 
     def _record(
         self,

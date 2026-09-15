@@ -204,7 +204,8 @@ def test_planning_fallback_on_failure() -> None:
     plan = session.resolve_plan()
     assert plan.plan_id == "default-fallback"
     assert session.fallback_reason == "LLMRequestError"
-    meta = session.metadata_after(plan, ())
+    meta, proposed = session.metadata_after(plan, ())
+    assert proposed == ()
     assert meta.planning_used is False
     assert meta.resolved_plan_id == "default-fallback"
     assert meta.invocation_count >= 1
@@ -223,7 +224,8 @@ def test_advisory_failure_does_not_change_findings() -> None:
     cfg = _assist_cfg()
     session = LLMSession(cfg, provider=FakeProvider(error=LLMRequestError("nope")))
     plan = default_plan(cfg)
-    meta = session.metadata_after(plan, result.findings)
+    meta, proposed = session.metadata_after(plan, result.findings)
+    assert proposed == ()
     assert result.findings == before
     assert meta.finding_advisory == {}
 
@@ -243,7 +245,8 @@ def test_successful_plan_does_not_invent_findings() -> None:
     }
     result = analyze_unit(normalize_helper_output(payload), max_depth=plan.max_depth)
     assert result.findings == ()
-    meta = session.metadata_after(plan, result.findings)
+    meta, proposed = session.metadata_after(plan, result.findings)
+    assert proposed == ()
     assert meta.planning_used is True
     assert "exploration_planning" in ALLOWED_FEATURES
 

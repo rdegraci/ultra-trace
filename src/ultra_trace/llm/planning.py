@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from ultra_trace.config import UltraTraceConfig
+from ultra_trace.frontend.models import FrontendUnit
 from ultra_trace.llm.features import feature_enabled
 from ultra_trace.llm.models import ExplorationPlan, LLMRequest
 from ultra_trace.llm.privacy import AssistPolicy, sanitize_for_mode
@@ -21,6 +22,8 @@ _PLAN_SYSTEM = (
     "You propose an Ultra-Trace exploration plan. Reply with JSON only. "
     "Allowed keys: max_depth (int), focus_modules (string array), "
     "priority_rules (string array of known rule ids). "
+    "Prefer focusing where coverage holes are highest "
+    "(unresolved/ambiguous calls, unsupported constructs, partial eligibility). "
     "Do not invent findings, severities, or proof decisions. "
     "Those fields, if present, are ignored."
 )
@@ -123,10 +126,28 @@ def load_replay_plan(path: Path | str, cfg: UltraTraceConfig) -> ExplorationPlan
     )
 
 
+def coverage_focus_brief(unit: FrontendUnit | None) -> str:
+    if unit is None:
+        return "coverage=unavailable"
+    from ultra_trace.reporting.coverage import (
+        call_resolution_counts,
+        eligibility_counts,
+        unsupported_summary,
+    )
+
+    return (
+        f"eligibility={eligibility_counts(unit)} "
+        f"call_resolution={call_resolution_counts(unit)} "
+        f"unsupported={unsupported_summary(unit)}"
+    )
+
+
 def request_plan(
     provider: LLMProvider,
     cfg: UltraTraceConfig,
     policy: AssistPolicy,
+    *,
+    unit: FrontendUnit | None = None,
 ) -> ExplorationPlan:
     from ultra_trace.rules.ids import DECLARED_RULES
 
@@ -135,7 +156,8 @@ def request_plan(
             f"Configured max_depth={cfg.max_depth}. "
             f"focus_modules={list(cfg.focus_modules)}. "
             f"Known rules={list(DECLARED_RULES)}. "
-            "Propose a plan within those limits."
+            f"Coverage holes: {coverage_focus_brief(unit)}. "
+            "Propose a plan within those limits that prioritizes coverage holes."
         ),
         policy.privacy_mode,
     )

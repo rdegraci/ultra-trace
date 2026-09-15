@@ -35,6 +35,7 @@ class LLMConfig:
         "reproduction_drafting",
         "report_summary",
         "proof_prose_polishing",
+        "candidate_proposals",
     )
 
 

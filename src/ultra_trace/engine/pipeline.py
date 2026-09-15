@@ -148,6 +148,28 @@ def analyze_repository(
         )
 
 
+def _finalize_with_llm(
+    session: LLMSession,
+    plan: ExplorationPlan,
+    result: AnalysisResult,
+) -> AnalysisResult:
+    meta, proposed = session.metadata_after(plan, result.findings, unit=result.unit)
+    if proposed:
+        findings = tuple(
+            sorted(
+                (*result.findings, *proposed),
+                key=lambda f: (
+                    f.location.file_path,
+                    f.location.start_line,
+                    f.location.start_column,
+                    f.id,
+                ),
+            )
+        )
+        result = replace(result, findings=findings)
+    return replace(result, llm=meta, resolved_plan=plan)
+
+
 def _analyze_repository_inner(
     repo_root: Path,
     cfg: UltraTraceConfig,
@@ -178,7 +200,6 @@ def _analyze_repository_inner(
             exclude_paths=cfg.exclude_paths,
         )
     session = LLMSession(cfg)
-    plan = session.resolve_plan()
     advanced_requested = "advanced" in cfg.analysis_modes and language == "swift"
     catalog = _taint_catalog_for(cfg)
     if language == "python":
@@ -187,7 +208,6 @@ def _analyze_repository_inner(
             cfg,
             discovered=discovered,
             session=session,
-            plan=plan,
             catalog=catalog,
         )
 
@@ -199,6 +219,7 @@ def _analyze_repository_inner(
                 "files": [],
             }
         )
+        plan = session.resolve_plan(unit=empty)
         result = analyze_unit(
             empty,
             max_depth=plan.max_depth,
@@ -215,9 +236,7 @@ def _analyze_repository_inner(
             sil_pipeline_ready=True,
         )
         return replace(
-            result,
-            llm=session.metadata_after(plan, result.findings),
-            resolved_plan=plan,
+            _finalize_with_llm(session, plan, result),
             advanced=advanced,
         )
 
@@ -231,6 +250,8 @@ def _analyze_repository_inner(
         fail_on_parser_drift=fail_on_parser_drift,
     )
     unit = normalize_helper_output(helper.payload)
+    # Plan after frontend normalize so coverage holes can guide focus.
+    plan = session.resolve_plan(unit=unit)
     result = analyze_unit(
         unit,
         max_depth=plan.max_depth,
@@ -269,11 +290,7 @@ def _analyze_repository_inner(
                 sil_pipeline_ready=True,
             ),
         )
-    return replace(
-        result,
-        llm=session.metadata_after(plan, result.findings),
-        resolved_plan=plan,
-    )
+    return _finalize_with_llm(session, plan, result)
 
 
 def _taint_catalog_for(cfg: UltraTraceConfig) -> TaintCatalog:
@@ -303,13 +320,10 @@ def _analyze_python_repository(
     *,
     discovered: list[RepositoryFile],
     session: LLMSession,
-    plan: object,
     catalog: TaintCatalog,
 ) -> AnalysisResult:
-    from ultra_trace.llm.models import ExplorationPlan
     from ultra_trace.python_frontend import normalize_python_sources
 
-    assert isinstance(plan, ExplorationPlan)
     if not discovered:
         unit = normalize_python_sources([], repo_root=repo_root)
     else:
@@ -317,6 +331,7 @@ def _analyze_python_repository(
             [f.path for f in discovered],
             repo_root=repo_root,
         )
+    plan = session.resolve_plan(unit=unit)
     result = analyze_unit(
         unit,
         max_depth=plan.max_depth,
@@ -327,9 +342,7 @@ def _analyze_python_repository(
         target_language="python",
     )
     return replace(
-        result,
-        llm=session.metadata_after(plan, result.findings),
-        resolved_plan=plan,
+        _finalize_with_llm(session, plan, result),
         advanced=resolve_advanced_status(
             requested=False,
             advanced_enabled=False,

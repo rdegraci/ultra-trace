@@ -16,7 +16,9 @@ _WORDING_SYSTEM = (
     "You draft advisory wording for Ultra-Trace findings. "
     "Reply with a JSON array of objects: "
     '{"id": finding id, "kind": '
-    '"recommended_fix_wording"|"reproduction_draft"|"proof_prose", "text": "..."}. '
+    '"recommended_fix_wording"|"reproduction_draft"|"proof_prose"|"path_interpretation", '
+    '"text": "..."}. '
+    "Use path_interpretation to explain the analyzer path brief only. "
     "Do not change severity, invent findings, or decide proof support. "
     "Do not claim the wording is analyzer evidence."
 )
@@ -28,10 +30,23 @@ _SUMMARY_SYSTEM = (
 
 
 def finding_briefs(
-    findings: Sequence[Finding], privacy_mode: str, *, limit: int = 8
+    findings: Sequence[Finding],
+    privacy_mode: str,
+    *,
+    limit: int = 8,
+    include_paths: bool = True,
 ) -> str:
+    """Build sanitized finding briefs for LLM assist.
+
+    Offline mode returns empty. Path summaries are included for redacted/full-assist
+    so wording can be path-conditioned without sending full source.
+    """
+    if privacy_mode == "offline":
+        return ""
     rows: list[dict[str, object]] = []
     for finding in findings[:limit]:
+        if finding.bug_type == "llm_proposed":
+            continue
         row: dict[str, object] = {
             "id": finding.id,
             "rule_id": finding.rule_id,
@@ -40,6 +55,9 @@ def finding_briefs(
             "line": finding.location.start_line,
             "file": finding.location.file_path.rsplit("/", 1)[-1],
         }
+        if include_paths and finding.path_summary:
+            # Keep path briefs short even in full-assist.
+            row["path_summary"] = finding.path_summary[:240]
         if privacy_mode == "full-assist":
             row["description"] = finding.description
             row["recommended_fix"] = finding.recommended_fix
@@ -74,6 +92,7 @@ def parse_advisory_items(
             "recommended_fix_wording",
             "reproduction_draft",
             "proof_prose",
+            "path_interpretation",
             "report_summary",
         }:
             continue
@@ -93,16 +112,20 @@ def request_finding_wording(
         kinds.append("reproduction_draft")
     if feature_enabled(policy.features, "proof_prose_polishing"):
         kinds.append("proof_prose")
+    # Path interpretation is available whenever any wording feature is on.
+    if kinds:
+        kinds.append("path_interpretation")
     if not kinds or not findings:
         return {}
+    authoritative = [f for f in findings if f.bug_type != "llm_proposed"]
     user = (
-        f"Allowed kinds: {kinds}. Findings:\n"
-        f"{finding_briefs(findings, policy.privacy_mode)}"
+        f"Allowed kinds: {kinds}. Path-conditioned findings:\n"
+        f"{finding_briefs(authoritative, policy.privacy_mode, include_paths=True)}"
     )
     response = provider.complete(
         LLMRequest(feature="remediation_wording", system=_WORDING_SYSTEM, user=user)
     )
-    return parse_advisory_items(response.text, {f.id for f in findings})
+    return parse_advisory_items(response.text, {f.id for f in authoritative})
 
 
 def request_report_summary(
@@ -112,7 +135,11 @@ def request_report_summary(
 ) -> str | None:
     if not feature_enabled(policy.features, "report_summary"):
         return None
-    user = f"Finding count={len(findings)}. Rules={[f.rule_id for f in findings[:12]]}."
+    authoritative = [f for f in findings if f.bug_type != "llm_proposed"]
+    user = (
+        f"Finding count={len(authoritative)}. "
+        f"Rules={[f.rule_id for f in authoritative[:12]]}."
+    )
     response = provider.complete(
         LLMRequest(
             feature="report_summary",

@@ -9,6 +9,7 @@ LLMFeature = Literal[
     "reproduction_drafting",
     "report_summary",
     "proof_prose_polishing",
+    "candidate_proposals",
 ]
 
 PlanSource = Literal["default", "llm", "fallback", "replay"]

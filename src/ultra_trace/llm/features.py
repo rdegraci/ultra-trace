@@ -9,6 +9,7 @@ ALLOWED_FEATURES: frozenset[str] = frozenset(
         "reproduction_drafting",
         "report_summary",
         "proof_prose_polishing",
+        "candidate_proposals",
     }
 )
 

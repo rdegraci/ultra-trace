@@ -187,6 +187,13 @@ Defaults stay offline with `llm.enabled: false`.
 3. `--llm-enabled --provider openai|anthropic|openai-compatible --model MODEL`.
 4. OpenAI-compatible also needs `--base-url`.
 
+When assist is on, the LLM may:
+- propose an exploration plan using frontend coverage holes (unresolved calls, etc.)
+- draft path-conditioned advisory wording for analyzer findings
+- emit optional `llm.proposed_candidate` review items (**never** fail Core severity gates)
+
+The analyzer still owns findings, severity, and proofs. Offline mode never sends path briefs.
+
 ```bash
 ultra-trace analyze --privacy-mode redacted --llm-enabled \
   --provider openai --model gpt-4.1-mini
