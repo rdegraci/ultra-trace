@@ -1,29 +1,144 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "effects": {
+    "Array.first": {
+      "may_return_nil": true
+    },
+    "Array.last": {
+      "may_return_nil": true
+    },
+    "Bundle.path": {
+      "may_return_nil": true
+    },
+    "Bundle.url": {
+      "may_return_nil": true
+    },
+    "CLLocationManager.location": {
+      "may_return_nil": true,
+      "taint_from_params": ["location"]
+    },
     "Data": {
       "may_return_nil": true,
       "may_throw": true
     },
+    "Data.init": {
+      "may_return_nil": true,
+      "may_throw": true
+    },
+    "Dictionary.removeValue": {
+      "may_return_nil": true
+    },
+    "FileManager.contents": {
+      "may_return_nil": true
+    },
+    "FileManager.contentsOfDirectory": {
+      "may_throw": true
+    },
+    "FileManager.createDirectory": {
+      "may_throw": true
+    },
+    "FileManager.removeItem": {
+      "may_throw": true
+    },
+    "FileManager.urls": {
+      "may_return_nil": false
+    },
     "JSONDecoder.decode": {
       "may_throw": true
     },
-    "JSONSerialization.jsonObject": {
+    "JSONEncoder.encode": {
       "may_throw": true
+    },
+    "JSONSerialization.data": {
+      "may_throw": true
+    },
+    "JSONSerialization.jsonObject": {
+      "may_throw": true,
+      "taint_from_params": ["json"]
+    },
+    "NSDictionary.object": {
+      "may_return_nil": true
+    },
+    "Notification.userInfo": {
+      "may_return_nil": true,
+      "taint_from_params": ["notification"]
+    },
+    "Optional.none": {
+      "may_return_nil": true
+    },
+    "ProcessInfo.environment": {
+      "taint_from_params": ["env"]
     },
     "String.init": {
       "may_return_nil": true
     },
+    "String.data": {
+      "may_return_nil": true
+    },
+    "UIApplication.open": {
+      "may_throw": false
+    },
+    "UIDevice.current": {
+      "may_return_nil": false
+    },
+    "UIImage": {
+      "may_return_nil": true
+    },
+    "UIImage.init": {
+      "may_return_nil": true
+    },
+    "UIPasteboard.general": {
+      "taint_from_params": ["pasteboard"]
+    },
+    "UIPasteboard.string": {
+      "may_return_nil": true,
+      "taint_from_params": ["pasteboard"]
+    },
+    "UITextField.text": {
+      "may_return_nil": true,
+      "taint_from_params": ["ui"]
+    },
+    "UITextView.text": {
+      "may_return_nil": true,
+      "taint_from_params": ["ui"]
+    },
     "URL": {
       "may_return_nil": true
     },
+    "URL.init": {
+      "may_return_nil": true
+    },
     "URLSession.data": {
+      "may_throw": true,
+      "taint_from_params": ["network"]
+    },
+    "URLSession.dataTask": {
+      "may_return_nil": false
+    },
+    "URLSession.shared": {
+      "may_return_nil": false
+    },
+    "UserDefaults.object": {
+      "may_return_nil": true,
+      "taint_from_params": ["defaults"]
+    },
+    "UserDefaults.string": {
+      "may_return_nil": true,
+      "taint_from_params": ["defaults"]
+    },
+    "WKWebView.evaluateJavaScript": {
       "may_throw": true
     },
     "fatalError": {
       "never_returns": true
     },
     "preconditionFailure": {
+      "never_returns": true
+    },
+    "abort": {
+      "never_returns": true
+    },
+    "exit": {
       "never_returns": true
     }
   }
