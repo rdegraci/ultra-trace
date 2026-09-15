@@ -147,6 +147,51 @@ def test_fail_on_partial_analysis_exit_4(tmp_path: Path, monkeypatch: object) ->
     assert result.exit_code == 4, result.stdout + result.stderr
 
 
+def test_explore_soft_exit_with_findings(tmp_path: Path, monkeypatch: object) -> None:
+    _appdir(tmp_path, monkeypatch)
+    payload = json.loads((FIXTURES / "force_unwrap.json").read_text(encoding="utf-8"))
+    analysis = analyze_unit(normalize_helper_output(payload), max_depth=12)
+    monkeypatch.setattr(
+        "ultra_trace.cli.analyze_repository",
+        lambda *args, **kwargs: analysis,
+    )
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "Main.swift").write_text("func demo() {}\n", encoding="utf-8")
+    soft = runner.invoke(
+        app,
+        [
+            "--quiet",
+            "explore",
+            "--repo-root",
+            str(repo),
+            "--output-dir",
+            str(tmp_path / "out-soft"),
+            "--format",
+            "json",
+            "--no-llm",
+        ],
+    )
+    assert soft.exit_code == 0, soft.stdout + soft.stderr
+    assert "Assist mode" in soft.stdout
+    hard = runner.invoke(
+        app,
+        [
+            "--quiet",
+            "explore",
+            "--repo-root",
+            str(repo),
+            "--output-dir",
+            str(tmp_path / "out-hard"),
+            "--format",
+            "json",
+            "--no-llm",
+            "--fail-on-findings",
+        ],
+    )
+    assert hard.exit_code == 1, hard.stdout + hard.stderr
+
+
 def test_internal_failure_exit_3(tmp_path: Path, monkeypatch: object) -> None:
     _appdir(tmp_path, monkeypatch)
 

@@ -5,6 +5,7 @@ from pathlib import Path
 from ultra_trace.config import (
     UltraTraceConfig,
     apply_cli_overrides,
+    apply_explore_profile,
     load_layered_config,
 )
 from ultra_trace.paths import APP_DIR_ENV
@@ -42,6 +43,18 @@ def test_builtin_defaults() -> None:
     assert "UITextField.text" in cfg.source_patterns
     assert "createFile" in cfg.sink_patterns
     assert "addingPercentEncoding" in cfg.sanitizer_patterns
+
+
+def test_apply_explore_profile_assist_defaults() -> None:
+    cfg = apply_explore_profile(UltraTraceConfig())
+    assert cfg.privacy_mode == "redacted"
+    assert cfg.llm.enabled is True
+    assert cfg.call_summary.enabled is True
+    assert cfg.call_summary.max_depth >= 1
+    assert "candidate_proposals" in cfg.llm.allowed_features
+    assert "exploration_planning" in cfg.llm.allowed_features
+    kept = apply_explore_profile(UltraTraceConfig(privacy_mode="full-assist"))
+    assert kept.privacy_mode == "full-assist"
 
 
 def test_empty_taint_lists_disable_starter_catalog(

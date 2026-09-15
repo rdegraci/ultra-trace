@@ -15,11 +15,13 @@ from ultra_trace.config import (
     AnalysisMode,
     OutputFormat,
     TargetLanguage,
+    UltraTraceConfig,
     apply_cli_overrides,
+    apply_explore_profile,
     load_layered_config,
 )
-from ultra_trace.discovery.scanner import default_scanner
-from ultra_trace.engine.pipeline import analyze_repository
+from ultra_trace.discovery.scanner import RepositoryFile, default_scanner
+from ultra_trace.engine.pipeline import AnalysisResult, analyze_repository
 from ultra_trace.llm import (
     LLMConfigError,
     apply_env_llm_overrides,
@@ -38,6 +40,7 @@ from ultra_trace.reporting.exit_codes import (
     EXIT_INTERNAL,
     EXIT_USAGE,
     exit_for_analysis,
+    exit_for_explore,
 )
 from ultra_trace.reporting.json_report import normalize_report_payload
 from ultra_trace.reporting.markdown import markdown_from_payload
@@ -46,7 +49,7 @@ from ultra_trace.rules import DECLARED_RULES, IMPLEMENTED_RULES
 
 app = typer.Typer(
     name="ultra-trace",
-    help="Ultra-Trace static analysis CLI (Swift Core MVP).",
+    help="Ultra-Trace static analysis CLI (explore + analyze).",
     no_args_is_help=True,
     add_completion=False,
 )
@@ -80,51 +83,18 @@ def main_callback(
     bootstrap_user_environment()
 
 
-@app.command("analyze")
-def analyze(
-    repo_root: Path = typer.Option(
-        Path.cwd(),
-        "--repo-root",
-        exists=True,
-        file_okay=False,
-        dir_okay=True,
-        readable=True,
-        resolve_path=True,
-        help="Repository root to analyze",
-    ),
-    config: Optional[Path] = typer.Option(
-        None, "--config", help="Project config YAML path"
-    ),
-    output_dir: Path = typer.Option(
-        Path.cwd(), "--output-dir", help="Directory for report files"
-    ),
-    output_basename: str = typer.Option(
-        "ultra-trace-report", "--output-basename", help="Report basename"
-    ),
-    format: Optional[list[str]] = typer.Option(
-        None, "--format", help="Repeatable: markdown|json|sarif"
-    ),
-    max_depth: Optional[int] = typer.Option(None, "--max-depth"),
-    focus_module: Optional[list[str]] = typer.Option(None, "--focus-module"),
-    severity_threshold: Optional[str] = typer.Option(None, "--severity-threshold"),
-    privacy_mode: Optional[str] = typer.Option(None, "--privacy-mode"),
-    llm_enabled: bool = typer.Option(False, "--llm-enabled"),
-    no_llm: bool = typer.Option(False, "--no-llm"),
-    provider: Optional[str] = typer.Option(None, "--provider"),
-    model: Optional[str] = typer.Option(None, "--model"),
-    base_url: Optional[str] = typer.Option(None, "--base-url"),
-    analysis_mode: Optional[list[str]] = typer.Option(None, "--analysis-mode"),
-    target_language: Optional[str] = typer.Option(
-        None, "--target-language", help="swift (default) or python"
-    ),
-    fail_on_partial_analysis: bool = typer.Option(False, "--fail-on-partial-analysis"),
-    fail_on_parser_drift: bool = typer.Option(False, "--fail-on-parser-drift"),
-    fail_on_advanced_unavailable: bool = typer.Option(
-        False, "--fail-on-advanced-unavailable"
-    ),
-    dry_run: bool = typer.Option(False, "--dry-run"),
-) -> None:
-    """Discover, analyze, and emit Core markdown/JSON reports."""
+def _validate_scan_options(
+    *,
+    llm_enabled: bool,
+    no_llm: bool,
+    severity_threshold: Optional[str],
+    privacy_mode: Optional[str],
+    provider: Optional[str],
+    target_language: Optional[str],
+    config: Optional[Path],
+    format: Optional[list[str]],
+    analysis_mode: Optional[list[str]],
+) -> tuple[list[OutputFormat] | None, list[AnalysisMode] | None, TargetLanguage | None]:
     if llm_enabled and no_llm:
         raise typer.BadParameter("--llm-enabled and --no-llm are mutually exclusive")
     if severity_threshold is not None and severity_threshold not in _SEVERITIES:
@@ -143,12 +113,6 @@ def analyze(
         typer.echo(f"configuration error: config not found: {config}", err=True)
         raise typer.Exit(code=EXIT_USAGE)
 
-    try:
-        cfg = load_layered_config(project_config=config, repo_root=repo_root)
-        cfg = apply_env_llm_overrides(cfg, dict(os.environ))
-    except (ValueError, yaml.YAMLError) as exc:
-        typer.echo(f"configuration error: {exc}", err=True)
-        raise typer.Exit(code=EXIT_USAGE) from exc
     formats: list[OutputFormat] | None = None
     if format:
         if any(item not in _FORMATS for item in format):
@@ -166,6 +130,36 @@ def analyze(
     lang: TargetLanguage | None = None
     if target_language is not None:
         lang = target_language  # type: ignore[assignment]
+    return formats, modes, lang
+
+
+def _prepare_scan_config(
+    *,
+    repo_root: Path,
+    config: Optional[Path],
+    explore: bool,
+    max_depth: Optional[int],
+    focus_module: Optional[list[str]],
+    severity_threshold: Optional[str],
+    privacy_mode: Optional[str],
+    formats: list[OutputFormat] | None,
+    modes: list[AnalysisMode] | None,
+    lang: TargetLanguage | None,
+    llm_enabled: bool,
+    no_llm: bool,
+    provider: Optional[str],
+    model: Optional[str],
+    base_url: Optional[str],
+) -> UltraTraceConfig:
+    try:
+        cfg = load_layered_config(project_config=config, repo_root=repo_root)
+        cfg = apply_env_llm_overrides(cfg, dict(os.environ))
+    except (ValueError, yaml.YAMLError) as exc:
+        typer.echo(f"configuration error: {exc}", err=True)
+        raise typer.Exit(code=EXIT_USAGE) from exc
+
+    if explore:
+        cfg = apply_explore_profile(cfg)
 
     cfg = apply_cli_overrides(
         cfg,
@@ -188,32 +182,42 @@ def analyze(
     except LLMConfigError as exc:
         typer.echo(f"configuration error: {exc}", err=True)
         raise typer.Exit(code=EXIT_USAGE) from exc
+    return cfg
 
-    if "advanced" in cfg.analysis_modes and fail_on_advanced_unavailable:
-        if cfg.target_language != "swift":
-            typer.echo(
-                "Advanced mode requires --target-language swift.",
-                err=True,
-            )
-            raise typer.Exit(code=EXIT_FRONTEND)
-        from ultra_trace.advanced.availability import resolve_advanced_status
-        from ultra_trace.advanced.sil_extract import resolve_swiftc
 
-        swiftc = resolve_swiftc(sil_toolchain_path=cfg.advanced.sil_toolchain_path)
-        status = resolve_advanced_status(
-            requested=True,
-            advanced_enabled=True,
-            sil_toolchain_path=cfg.advanced.sil_toolchain_path,
-            sil_pipeline_ready=True,
+def _enforce_advanced_availability(
+    cfg: UltraTraceConfig, *, fail_on_advanced_unavailable: bool
+) -> None:
+    if "advanced" not in cfg.analysis_modes or not fail_on_advanced_unavailable:
+        return
+    if cfg.target_language != "swift":
+        typer.echo(
+            "Advanced mode requires --target-language swift.",
+            err=True,
         )
-        if swiftc is None or not status.sil_available:
-            reason = status.fallback_reason or "advanced_unavailable"
-            typer.echo(
-                f"Advanced mode was requested but is unavailable ({reason}).",
-                err=True,
-            )
-            raise typer.Exit(code=EXIT_FRONTEND)
+        raise typer.Exit(code=EXIT_FRONTEND)
+    from ultra_trace.advanced.availability import resolve_advanced_status
+    from ultra_trace.advanced.sil_extract import resolve_swiftc
 
+    swiftc = resolve_swiftc(sil_toolchain_path=cfg.advanced.sil_toolchain_path)
+    status = resolve_advanced_status(
+        requested=True,
+        advanced_enabled=True,
+        sil_toolchain_path=cfg.advanced.sil_toolchain_path,
+        sil_pipeline_ready=True,
+    )
+    if swiftc is None or not status.sil_available:
+        reason = status.fallback_reason or "advanced_unavailable"
+        typer.echo(
+            f"Advanced mode was requested but is unavailable ({reason}).",
+            err=True,
+        )
+        raise typer.Exit(code=EXIT_FRONTEND)
+
+
+def _discover_target_files(
+    repo_root: Path, cfg: UltraTraceConfig
+) -> tuple[list[RepositoryFile], str]:
     scanner = default_scanner()
     if cfg.target_language == "python":
         from ultra_trace.config import UltraTraceConfig as _Cfg
@@ -227,14 +231,29 @@ def analyze(
             include_paths=cfg.include_paths,
             exclude_paths=excludes,
         )
-        label = "Python"
-    else:
-        files = scanner.discover_swift_files(
-            repo_root,
-            include_paths=cfg.include_paths,
-            exclude_paths=cfg.exclude_paths,
-        )
-        label = "Swift"
+        return files, "Python"
+    files = scanner.discover_swift_files(
+        repo_root,
+        include_paths=cfg.include_paths,
+        exclude_paths=cfg.exclude_paths,
+    )
+    return files, "Swift"
+
+
+def _run_scan_and_report(
+    *,
+    repo_root: Path,
+    cfg: UltraTraceConfig,
+    output_dir: Path,
+    output_basename: str,
+    fail_on_parser_drift: bool,
+    fail_on_advanced_unavailable: bool,
+    dry_run: bool,
+) -> AnalysisResult | None:
+    _enforce_advanced_availability(
+        cfg, fail_on_advanced_unavailable=fail_on_advanced_unavailable
+    )
+    files, label = _discover_target_files(repo_root, cfg)
     logger.info("Discovered %d %s file(s) under %s", len(files), label, repo_root)
 
     if dry_run:
@@ -250,7 +269,7 @@ def analyze(
         typer.echo(
             f"Dry run: discovered {len(files)} {label} file(s); reports not written."
         )
-        return
+        return None
 
     try:
         analysis = analyze_repository(
@@ -299,10 +318,201 @@ def analyze(
     for proof_path in written.proof_paths:
         typer.echo(f"Wrote {proof_path}")
     typer.echo(f"Findings: {len(analysis.findings)} (paths={analysis.paths_explored})")
+    return analysis
+
+
+@app.command("analyze")
+def analyze(
+    repo_root: Path = typer.Option(
+        Path.cwd(),
+        "--repo-root",
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+        readable=True,
+        resolve_path=True,
+        help="Repository root to analyze",
+    ),
+    config: Optional[Path] = typer.Option(
+        None, "--config", help="Project config YAML path"
+    ),
+    output_dir: Path = typer.Option(
+        Path.cwd(), "--output-dir", help="Directory for report files"
+    ),
+    output_basename: str = typer.Option(
+        "ultra-trace-report", "--output-basename", help="Report basename"
+    ),
+    format: Optional[list[str]] = typer.Option(
+        None, "--format", help="Repeatable: markdown|json|sarif"
+    ),
+    max_depth: Optional[int] = typer.Option(None, "--max-depth"),
+    focus_module: Optional[list[str]] = typer.Option(None, "--focus-module"),
+    severity_threshold: Optional[str] = typer.Option(None, "--severity-threshold"),
+    privacy_mode: Optional[str] = typer.Option(None, "--privacy-mode"),
+    llm_enabled: bool = typer.Option(False, "--llm-enabled"),
+    no_llm: bool = typer.Option(False, "--no-llm"),
+    provider: Optional[str] = typer.Option(None, "--provider"),
+    model: Optional[str] = typer.Option(None, "--model"),
+    base_url: Optional[str] = typer.Option(None, "--base-url"),
+    analysis_mode: Optional[list[str]] = typer.Option(None, "--analysis-mode"),
+    target_language: Optional[str] = typer.Option(
+        None, "--target-language", help="swift (default) or python"
+    ),
+    fail_on_partial_analysis: bool = typer.Option(False, "--fail-on-partial-analysis"),
+    fail_on_parser_drift: bool = typer.Option(False, "--fail-on-parser-drift"),
+    fail_on_advanced_unavailable: bool = typer.Option(
+        False, "--fail-on-advanced-unavailable"
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+) -> None:
+    """Discover, analyze, and emit Core markdown/JSON reports (CI gate)."""
+    formats, modes, lang = _validate_scan_options(
+        llm_enabled=llm_enabled,
+        no_llm=no_llm,
+        severity_threshold=severity_threshold,
+        privacy_mode=privacy_mode,
+        provider=provider,
+        target_language=target_language,
+        config=config,
+        format=format,
+        analysis_mode=analysis_mode,
+    )
+    cfg = _prepare_scan_config(
+        repo_root=repo_root,
+        config=config,
+        explore=False,
+        max_depth=max_depth,
+        focus_module=focus_module,
+        severity_threshold=severity_threshold,
+        privacy_mode=privacy_mode,
+        formats=formats,
+        modes=modes,
+        lang=lang,
+        llm_enabled=llm_enabled,
+        no_llm=no_llm,
+        provider=provider,
+        model=model,
+        base_url=base_url,
+    )
+    analysis = _run_scan_and_report(
+        repo_root=repo_root,
+        cfg=cfg,
+        output_dir=output_dir,
+        output_basename=output_basename,
+        fail_on_parser_drift=fail_on_parser_drift,
+        fail_on_advanced_unavailable=fail_on_advanced_unavailable,
+        dry_run=dry_run,
+    )
+    if analysis is None:
+        return
     raise typer.Exit(
         code=exit_for_analysis(
             analysis,
             severity_threshold=cfg.severity_threshold,
+            fail_on_partial_analysis=fail_on_partial_analysis,
+        )
+    )
+
+
+@app.command("explore")
+def explore(
+    repo_root: Path = typer.Option(
+        Path.cwd(),
+        "--repo-root",
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+        readable=True,
+        resolve_path=True,
+        help="Repository root to explore",
+    ),
+    config: Optional[Path] = typer.Option(
+        None, "--config", help="Project config YAML path"
+    ),
+    output_dir: Path = typer.Option(
+        Path.cwd(), "--output-dir", help="Directory for report files"
+    ),
+    output_basename: str = typer.Option(
+        "ultra-trace-explore-report",
+        "--output-basename",
+        help="Report basename",
+    ),
+    format: Optional[list[str]] = typer.Option(
+        None, "--format", help="Repeatable: markdown|json|sarif"
+    ),
+    max_depth: Optional[int] = typer.Option(None, "--max-depth"),
+    focus_module: Optional[list[str]] = typer.Option(None, "--focus-module"),
+    severity_threshold: Optional[str] = typer.Option(None, "--severity-threshold"),
+    privacy_mode: Optional[str] = typer.Option(None, "--privacy-mode"),
+    llm_enabled: bool = typer.Option(False, "--llm-enabled"),
+    no_llm: bool = typer.Option(False, "--no-llm"),
+    provider: Optional[str] = typer.Option(None, "--provider"),
+    model: Optional[str] = typer.Option(None, "--model"),
+    base_url: Optional[str] = typer.Option(None, "--base-url"),
+    analysis_mode: Optional[list[str]] = typer.Option(None, "--analysis-mode"),
+    target_language: Optional[str] = typer.Option(
+        None, "--target-language", help="swift (default) or python"
+    ),
+    fail_on_findings: bool = typer.Option(
+        False,
+        "--fail-on-findings",
+        help="Exit 1 when analyzer findings meet severity threshold",
+    ),
+    fail_on_partial_analysis: bool = typer.Option(False, "--fail-on-partial-analysis"),
+    fail_on_parser_drift: bool = typer.Option(False, "--fail-on-parser-drift"),
+    fail_on_advanced_unavailable: bool = typer.Option(
+        False, "--fail-on-advanced-unavailable"
+    ),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+) -> None:
+    """Human-first LLM-assisted tracing (soft exit; assist is non-authoritative)."""
+    formats, modes, lang = _validate_scan_options(
+        llm_enabled=llm_enabled,
+        no_llm=no_llm,
+        severity_threshold=severity_threshold,
+        privacy_mode=privacy_mode,
+        provider=provider,
+        target_language=target_language,
+        config=config,
+        format=format,
+        analysis_mode=analysis_mode,
+    )
+    cfg = _prepare_scan_config(
+        repo_root=repo_root,
+        config=config,
+        explore=True,
+        max_depth=max_depth,
+        focus_module=focus_module,
+        severity_threshold=severity_threshold,
+        privacy_mode=privacy_mode,
+        formats=formats,
+        modes=modes,
+        lang=lang,
+        llm_enabled=llm_enabled,
+        no_llm=no_llm,
+        provider=provider,
+        model=model,
+        base_url=base_url,
+    )
+    typer.echo(
+        "Assist mode: LLM advisory only. Analyzer owns findings, severity, and proofs."
+    )
+    analysis = _run_scan_and_report(
+        repo_root=repo_root,
+        cfg=cfg,
+        output_dir=output_dir,
+        output_basename=output_basename,
+        fail_on_parser_drift=fail_on_parser_drift,
+        fail_on_advanced_unavailable=fail_on_advanced_unavailable,
+        dry_run=dry_run,
+    )
+    if analysis is None:
+        return
+    raise typer.Exit(
+        code=exit_for_explore(
+            analysis,
+            severity_threshold=cfg.severity_threshold,
+            fail_on_findings=fail_on_findings,
             fail_on_partial_analysis=fail_on_partial_analysis,
         )
     )

@@ -1,0 +1,59 @@
+# Assist / explore profile (human-first LLM-assisted tracing).
+# Use with: ultra-trace explore --config examples/ultra-trace-assist.yml
+# Or rely on `explore` built-in assist defaults (same intent).
+#
+# CI gates should keep using examples/ultra-trace.yml + `analyze`.
+# LLM-proposed candidates never fail Core severity gates.
+# Do not auto-execute generated XCTest/pytest proof scaffolds.
+
+analysisModes:
+  - core
+
+rulePacks:
+  - core
+
+targetLanguage: swift
+
+# Assist needs a non-offline privacy mode so path briefs can be sent (redacted).
+privacyMode: redacted
+
+llm:
+  enabled: true
+  allowedFeatures:
+    - exploration_planning
+    - remediation_wording
+    - reproduction_drafting
+    - report_summary
+    - proof_prose_polishing
+    - candidate_proposals
+
+severityThreshold: medium
+proofMode: mixed
+maxDepth: 12
+
+outputFormats:
+  - markdown
+  - json
+
+includePaths: []
+excludePaths:
+  - .git
+  - DerivedData
+  - .build
+  - Pods
+  - Carthage
+  - SourcePackages
+
+focusModules: []
+
+callSummary:
+  # Bounded summaries + SDK stubs improve iOS/macOS tracing under explore.
+  enabled: true
+  maxDepth: 1
+
+advanced:
+  enabled: false
+
+swiftFrontend:
+  helperPath: null
+  helperTimeoutSeconds: 120

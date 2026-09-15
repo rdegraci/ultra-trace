@@ -1,7 +1,8 @@
-"""CLI-SPEC exit policy for analyze (0–4).
+"""CLI-SPEC exit policy for analyze / explore (0–4).
 
-0  completed; no finding at or above ``severity_threshold``
-1  completed; at least one finding meets the threshold
+0  completed; no finding at or above ``severity_threshold`` (analyze), or soft
+   explore success (explore defaults to 0 unless ``--fail-on-findings``)
+1  completed; at least one analyzer finding meets the threshold
 2  configuration or invocation error
 3  unexpected internal analyzer failure
 4  frontend health policy failed (parser drift, ``--fail-on-partial-analysis``,
@@ -9,6 +10,8 @@
 
 Health codes (2–4) win over the findings code. ``--fail-on-partial-analysis``
 is off by default so unsupported Swift does not fail CI.
+
+LLM-proposed candidates (``llm.proposed_*``) never trip the findings gate.
 """
 
 from __future__ import annotations
@@ -47,5 +50,25 @@ def exit_for_analysis(
     if fail_on_partial_analysis and has_partial_analysis(result.unit):
         return EXIT_FRONTEND
     if findings_meet_threshold(result.findings, severity_threshold):
+        return EXIT_FINDINGS
+    return EXIT_OK
+
+
+def exit_for_explore(
+    result: AnalysisResult,
+    *,
+    severity_threshold: str,
+    fail_on_findings: bool = False,
+    fail_on_partial_analysis: bool = False,
+) -> int:
+    """Soft exit for ``explore``: OK unless ``--fail-on-findings`` is set.
+
+    LLM-proposed candidates never trip the findings gate (same as analyze).
+    """
+    if fail_on_partial_analysis and has_partial_analysis(result.unit):
+        return EXIT_FRONTEND
+    if fail_on_findings and findings_meet_threshold(
+        result.findings, severity_threshold
+    ):
         return EXIT_FINDINGS
     return EXIT_OK

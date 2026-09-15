@@ -15,6 +15,7 @@ def test_help(tmp_path: Path, monkeypatch: object) -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "analyze" in result.stdout
+    assert "explore" in result.stdout
     assert "report" in result.stdout
     assert "list-rules" in result.stdout
 
@@ -40,4 +41,25 @@ def test_analyze_dry_run(tmp_path: Path, monkeypatch: object) -> None:
         app, ["--quiet", "analyze", "--repo-root", str(repo), "--dry-run"]
     )
     assert result.exit_code == 0
+    assert "discovered 1 Swift file" in result.stdout
+
+
+def test_explore_dry_run(tmp_path: Path, monkeypatch: object) -> None:
+    monkeypatch.setenv(APP_DIR_ENV, str(tmp_path / "app"))  # type: ignore[attr-defined]
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "Main.swift").write_text("let x = 1\n", encoding="utf-8")
+    result = runner.invoke(
+        app,
+        [
+            "--quiet",
+            "explore",
+            "--repo-root",
+            str(repo),
+            "--dry-run",
+            "--no-llm",
+        ],
+    )
+    assert result.exit_code == 0, result.stdout + result.stderr
+    assert "Assist mode" in result.stdout
     assert "discovered 1 Swift file" in result.stdout

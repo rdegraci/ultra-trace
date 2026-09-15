@@ -9,6 +9,7 @@ from ultra_trace.reporting.exit_codes import (
     EXIT_FRONTEND,
     EXIT_OK,
     exit_for_analysis,
+    exit_for_explore,
     findings_meet_threshold,
 )
 from ultra_trace.swift_frontend import normalize_helper_output
@@ -31,6 +32,11 @@ def test_severity_threshold_matrix_on_force_unwrap() -> None:
     assert not findings_meet_threshold(result.findings, "critical")
     assert exit_for_analysis(result, severity_threshold="high") == EXIT_FINDINGS
     assert exit_for_analysis(result, severity_threshold="critical") == EXIT_OK
+    assert exit_for_explore(result, severity_threshold="high") == EXIT_OK
+    assert (
+        exit_for_explore(result, severity_threshold="high", fail_on_findings=True)
+        == EXIT_FINDINGS
+    )
 
 
 def test_empty_findings_are_exit_ok() -> None:

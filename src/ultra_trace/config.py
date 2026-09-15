@@ -262,6 +262,34 @@ def load_layered_config(
     return cfg
 
 
+def apply_explore_profile(cfg: UltraTraceConfig) -> UltraTraceConfig:
+    """Assist defaults for ``ultra-trace explore`` (human-first tracing).
+
+    Does not replace an explicit non-offline privacy mode or an already-enabled
+    call-summary config. CLI overrides still apply afterward.
+    """
+    privacy = cfg.privacy_mode if cfg.privacy_mode != "offline" else "redacted"
+    llm = replace(cfg.llm, enabled=True)
+    call = cfg.call_summary
+    if not call.enabled:
+        call = replace(call, enabled=True, max_depth=max(1, call.max_depth or 1))
+    features = tuple(
+        dict.fromkeys(
+            (
+                *llm.allowed_features,
+                "exploration_planning",
+                "remediation_wording",
+                "reproduction_drafting",
+                "report_summary",
+                "proof_prose_polishing",
+                "candidate_proposals",
+            )
+        )
+    )
+    llm = replace(llm, allowed_features=features)
+    return replace(cfg, privacy_mode=privacy, llm=llm, call_summary=call)
+
+
 def apply_cli_overrides(
     cfg: UltraTraceConfig,
     *,

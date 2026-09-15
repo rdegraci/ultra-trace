@@ -4,6 +4,8 @@ Deterministic static analysis CLI for Swift (Core) with optional Advanced SIL,
 bounded call summaries, and a Python frontend. Product planning docs live in
 [`docs/cache/`](docs/cache/README.md) (local/gitignored).
 
+**Use `explore` to understand paths with LLM help; use `analyze` to gate the build.**
+
 **Phases 1–6 are complete.** Phase 7 (platform maturity) covers Mac fleet
 bootstrap, perf budgets, SARIF export, and operator security hygiene.
 
@@ -11,8 +13,9 @@ bootstrap, perf budgets, SARIF export, and operator security hygiene.
 
 1. `source .venv/bin/activate` (or recreate venv + `pip install -e ".[dev]"`).
 2. Bootstrap helper: `./scripts/bootstrap_macos_ci.sh`
-3. Sanity: `ultra-trace analyze --config examples/ultra-trace.yml --repo-root fixtures/swift/vertical --output-dir /tmp/ut-check`
-4. Optional Python: add `--target-language python --repo-root fixtures/python/vertical`
+3. Day-to-day: `ultra-trace explore --config examples/ultra-trace-assist.yml --repo-root fixtures/swift/vertical --output-dir /tmp/ut-check` (needs API key in appdir `.env`, or `--no-llm`)
+4. Nightly gate: `ultra-trace analyze --config examples/ultra-trace.yml --repo-root fixtures/swift/vertical --output-dir /tmp/ut-check`
+5. Optional Python: add `--target-language python --repo-root fixtures/python/vertical`
 
 ## Install
 
@@ -56,11 +59,34 @@ Put API keys only in `.env` (`ULTRA_TRACE_LLM_API_KEY`). Never put secrets in YA
 Override the app directory with `ULTRA_TRACE_APP_DIR` in tests or CI.
 
 Project overrides: copy [`examples/ultra-trace.yml`](examples/ultra-trace.yml) to
-the repo root as `ultra-trace.yml`, or pass `--config`.
+the repo root as `ultra-trace.yml`, or pass `--config`. Assist profile:
+[`examples/ultra-trace-assist.yml`](examples/ultra-trace-assist.yml).
 
-## Analyze offline (CI default)
+## Explore (day-to-day assist)
 
-Core only, `privacyMode: offline`, LLM off. No network, no key.
+Human-first tracing. Built-in assist defaults: `privacyMode: redacted`, LLM on
+(planning, advisory wording, candidates), call summaries on (`maxDepth: 1`).
+Same analysis engine as `analyze`. Soft exit: `0` unless you pass
+`--fail-on-findings` (and never for `llm.proposed_candidate` alone).
+
+```bash
+ultra-trace explore \
+  --config examples/ultra-trace-assist.yml \
+  --repo-root /path/to/swift/repo \
+  --output-dir /tmp/ultra-trace \
+  --provider openai --model gpt-4.1-mini
+```
+
+Without a key, use `--no-llm` (still gets call summaries + redacted defaults) or
+set `ULTRA_TRACE_LLM_API_KEY` in the appdir `.env`.
+
+Reports default to basename `ultra-trace-explore-report`. Assist is advisory only;
+the analyzer owns findings, severity, and proofs.
+
+## Analyze offline (CI / nightly)
+
+Core only, `privacyMode: offline`, LLM off. No network, no key. Defaults are
+unchanged from prior releases.
 
 ```bash
 ultra-trace analyze \
@@ -98,7 +124,7 @@ Do not default `--fail-on-partial-analysis` in nightly CI.
 ## Read reports
 
 Writes under `--output-dir` (basename `--output-basename`, default
-`ultra-trace-report`):
+`ultra-trace-report` for analyze / `ultra-trace-explore-report` for explore):
 
 | File | Contents |
 |---|---|
@@ -171,7 +197,8 @@ pytest -q
 
 ## Known limitations
 
-- Core defaults stay intra-procedural; enable `callSummary` for bounded summaries.
+- Core defaults stay intra-procedural; enable `callSummary` for bounded summaries
+  (`explore` turns this on by default).
 - Advanced SIL needs Mac `swiftc`; falls back to Core when unavailable.
 - Unsupported constructs are recorded; confidence degrades. They do not justify
   High findings alone.
@@ -180,7 +207,8 @@ pytest -q
 
 ## LLM assist (optional)
 
-Defaults stay offline with `llm.enabled: false`.
+`analyze` defaults stay offline with `llm.enabled: false`. Prefer `explore` for
+day-to-day assist (built-in redacted + LLM + candidates), or configure analyze:
 
 1. Put the key only in `~/Library/Application Support/ultra-trace/.env`.
 2. Set `privacyMode: redacted` or `full-assist`.
@@ -195,6 +223,9 @@ When assist is on, the LLM may:
 The analyzer still owns findings, severity, and proofs. Offline mode never sends path briefs.
 
 ```bash
+ultra-trace explore --config examples/ultra-trace-assist.yml \
+  --provider openai --model gpt-4.1-mini
+# or on analyze:
 ultra-trace analyze --privacy-mode redacted --llm-enabled \
   --provider openai --model gpt-4.1-mini
 ```
