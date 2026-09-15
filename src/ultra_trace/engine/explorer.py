@@ -8,6 +8,7 @@ from ultra_trace.cfg.walk import (
     unwraps_in_statement,
     walk_expressions,
 )
+from ultra_trace.engine.async_edges import task_hop_style
 from ultra_trace.engine.exprs import expr_text, ident_name
 from ultra_trace.engine.facts import (
     apply_condition_facts,
@@ -50,6 +51,7 @@ class UnwrapEvent:
     location: SourceSpan
     path_node_ids: tuple[str, ...]
     witness_note: str | None = None
+    uncertain_suspension: bool = False
 
 
 @dataclass(frozen=True)
@@ -60,6 +62,26 @@ class TryBangEvent:
     resolved_callee_symbol_id: str | None
     may_throw: bool | None
     path_node_ids: tuple[str, ...]
+    witness_note: str | None = None
+    uncertain_suspension: bool = False
+
+
+@dataclass(frozen=True)
+class AwaitEvent:
+    expression_id: str
+    location: SourceSpan
+    path_node_ids: tuple[str, ...]
+    suspension_known: bool = False
+    witness_note: str | None = "await; suspension semantics unknown"
+
+
+@dataclass(frozen=True)
+class TaskHopEvent:
+    expression_id: str
+    location: SourceSpan
+    style: str
+    path_node_ids: tuple[str, ...]
+    suspension_known: bool = False
     witness_note: str | None = None
 
 
@@ -156,6 +178,8 @@ class ExplorationResult:
     divisions: tuple[DivisionEvent, ...] = ()
     arithmetic: tuple[ArithmeticEvent, ...] = ()
     optional_misuses: tuple[OptionalMisuseEvent, ...] = ()
+    awaits: tuple[AwaitEvent, ...] = ()
+    task_hops: tuple[TaskHopEvent, ...] = ()
 
 
 @dataclass
@@ -168,6 +192,8 @@ class _Acc:
     divisions: list[DivisionEvent]
     arithmetic: list[ArithmeticEvent]
     optional_misuses: list[OptionalMisuseEvent]
+    awaits: list[AwaitEvent]
+    task_hops: list[TaskHopEvent]
 
 
 class PathExplorer:
@@ -194,7 +220,7 @@ class PathExplorer:
         exprs = expressions_by_id(symbol.body)
         initial = _initial_state(symbol)
         paths: list[ExploredPath] = []
-        acc = _Acc([], [], [], [], [], [], [], [])
+        acc = _Acc([], [], [], [], [], [], [], [], [], [])
         seen: set[tuple[str, tuple[object, ...]]] = set()
 
         def walk(
@@ -261,6 +287,8 @@ class PathExplorer:
             divisions=tuple(acc.divisions),
             arithmetic=tuple(acc.arithmetic),
             optional_misuses=tuple(acc.optional_misuses),
+            awaits=_dedupe_by_expression_id(acc.awaits),
+            task_hops=_dedupe_by_expression_id(acc.task_hops),
         )
 
     def _prune_dead(
@@ -307,19 +335,50 @@ class PathExplorer:
         trail: tuple[str, ...],
         acc: _Acc,
     ) -> tuple[SymbolicState, tuple[UnwrapEvent, ...]]:
-        if node.kind == "call" and node.expression_id:
-            self._scan_expr(node.expression_id, exprs, state, trail, acc)
-            return self._on_call(node.expression_id, state, exprs), ()
+        if node.kind == "await" and node.expression_id:
+            expr = exprs.get(node.expression_id)
+            if expr is not None:
+                acc.awaits.append(
+                    AwaitEvent(
+                        expression_id=expr.expression_id,
+                        location=expr.location,
+                        path_node_ids=trail,
+                    )
+                )
+            return state.widen_after_suspension(), ()
+        if node.kind in {"call", "task_hop"} and node.expression_id:
+            saw_hop = self._scan_expr(
+                node.expression_id, exprs, state, trail, acc
+            )
+            state = self._on_call(node.expression_id, state, exprs)
+            if saw_hop or node.kind == "task_hop":
+                state = state.widen_after_suspension()
+            return state, ()
         events: tuple[UnwrapEvent, ...] = ()
         if node.statement_id and node.statement_id in stmts:
             stmt = stmts[node.statement_id]
-            events = _unwrap_events(stmt, exprs, state, trail, self.summaries)
-            self._scan_statement(stmt, exprs, state, trail, acc)
+            # Scan first so same-statement await/Task marks unwrap/try! as uncertain.
+            saw_hop = self._scan_statement(stmt, exprs, state, trail, acc)
+            uncertain = state.uncertain_suspension or saw_hop
+            events = _unwrap_events(
+                stmt,
+                exprs,
+                state,
+                trail,
+                self.summaries,
+                uncertain_suspension=uncertain,
+            )
             state = _apply_statement(
                 stmt, state, exprs, self.taint_catalog, self.summaries
             )
+            if saw_hop:
+                state = state.widen_after_suspension()
         if node.expression_id and node.kind == "condition":
-            self._scan_expr(node.expression_id, exprs, state, trail, acc)
+            saw_hop = self._scan_expr(
+                node.expression_id, exprs, state, trail, acc
+            )
+            if saw_hop:
+                state = state.widen_after_suspension()
         return state, events
 
     def _on_call(
@@ -346,11 +405,14 @@ class PathExplorer:
         state: SymbolicState,
         trail: tuple[str, ...],
         acc: _Acc,
-    ) -> None:
+    ) -> bool:
         from ultra_trace.cfg.walk import statement_root_expression_ids
 
+        saw_hop = False
         for root in statement_root_expression_ids(stmt):
-            self._scan_expr(root, exprs, state, trail, acc)
+            if self._scan_expr(root, exprs, state, trail, acc):
+                saw_hop = True
+        return saw_hop
 
     def _scan_expr(
         self,
@@ -359,12 +421,40 @@ class PathExplorer:
         state: SymbolicState,
         trail: tuple[str, ...],
         acc: _Acc,
-    ) -> None:
-        for expr in walk_expressions(root_id, exprs):
+    ) -> bool:
+        walked = walk_expressions(root_id, exprs)
+        tree_has_hop = False
+        for expr in walked:
+            if expr.kind == "await":
+                tree_has_hop = True
+                break
+            if expr.kind == "call" and isinstance(expr.payload, CallPayload):
+                text = expr.payload.callee_text or expr_text(expr.expression_id, exprs)
+                if task_hop_style(text) is not None:
+                    tree_has_hop = True
+                    break
+        uncertain = state.uncertain_suspension or tree_has_hop
+        saw_hop = False
+        for expr in walked:
+            if expr.kind == "await":
+                acc.awaits.append(
+                    AwaitEvent(
+                        expression_id=expr.expression_id,
+                        location=expr.location,
+                        path_node_ids=trail,
+                    )
+                )
+                saw_hop = True
             if expr.kind == "try_expression" and isinstance(expr.payload, TryPayload):
                 if expr.payload.style == "try!":
                     acc.try_bangs.append(
-                        _try_bang_event(expr, exprs, trail, self.summaries)
+                        _try_bang_event(
+                            expr,
+                            exprs,
+                            trail,
+                            self.summaries,
+                            uncertain_suspension=uncertain,
+                        )
                     )
             if expr.kind == "forced_cast" and isinstance(
                 expr.payload, ForcedCastPayload
@@ -399,6 +489,20 @@ class PathExplorer:
                 )
             if expr.kind == "call" and isinstance(expr.payload, CallPayload):
                 text = expr.payload.callee_text or expr_text(expr.expression_id, exprs)
+                style = task_hop_style(text)
+                if style is not None:
+                    acc.task_hops.append(
+                        TaskHopEvent(
+                            expression_id=expr.expression_id,
+                            location=expr.location,
+                            style=style,
+                            path_node_ids=trail,
+                            witness_note=(
+                                f"task_hop={style}; suspension semantics unknown"
+                            ),
+                        )
+                    )
+                    saw_hop = True
                 sink = self.taint_catalog.match_sink(text)
                 if sink:
                     tags: set[str] = set()
@@ -483,6 +587,19 @@ class PathExplorer:
                                 path_node_ids=trail,
                             )
                         )
+        return saw_hop
+
+
+def _dedupe_by_expression_id(events: list[object]) -> tuple[object, ...]:
+    seen: set[str] = set()
+    out: list[object] = []
+    for event in events:
+        eid = getattr(event, "expression_id", None)
+        if not isinstance(eid, str) or eid in seen:
+            continue
+        seen.add(eid)
+        out.append(event)
+    return tuple(out)
 
 
 def _overflow_proven(op: str, left: str | None, right: str | None) -> bool:
@@ -584,6 +701,8 @@ def _unwrap_events(
     state: SymbolicState,
     trail: tuple[str, ...],
     summaries: FunctionSummaryProvider | None = None,
+    *,
+    uncertain_suspension: bool = False,
 ) -> tuple[UnwrapEvent, ...]:
     events: list[UnwrapEvent] = []
     for unwrap in unwraps_in_statement(stmt, exprs):
@@ -596,6 +715,7 @@ def _unwrap_events(
                 location=unwrap.location,
                 path_node_ids=trail,
                 witness_note=note,
+                uncertain_suspension=uncertain_suspension,
             )
         )
     return tuple(events)
@@ -632,6 +752,8 @@ def _try_bang_event(
     exprs: dict[str, NormalizedExpression],
     trail: tuple[str, ...],
     summaries: FunctionSummaryProvider,
+    *,
+    uncertain_suspension: bool = False,
 ) -> TryBangEvent:
     callee_text = ""
     resolved: str | None = None
@@ -656,4 +778,5 @@ def _try_bang_event(
         may_throw=may_throw,
         path_node_ids=trail,
         witness_note=note,
+        uncertain_suspension=uncertain_suspension,
     )

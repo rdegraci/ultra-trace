@@ -120,6 +120,17 @@ def unwraps_in_statement(
     return tuple(found)
 
 
+def awaits_in_statement(
+    stmt: NormalizedStatement, by_id: dict[str, NormalizedExpression]
+) -> tuple[NormalizedExpression, ...]:
+    found: list[NormalizedExpression] = []
+    for root in statement_root_expression_ids(stmt):
+        for expr in walk_expressions(root, by_id):
+            if expr.kind == "await":
+                found.append(expr)
+    return tuple(found)
+
+
 def call_site_for(expr: NormalizedExpression) -> str | None:
     if expr.kind != "call":
         return None

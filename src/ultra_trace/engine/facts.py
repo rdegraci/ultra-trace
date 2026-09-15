@@ -87,6 +87,10 @@ def eval_nilness(
         return "non_nil"
     if expr.kind == "nil_coalescing":
         return "non_nil"
+    if expr.kind == "await" and isinstance(expr.payload, WrapperPayload):
+        return eval_nilness(
+            expr.payload.operand_expression_id, exprs, state, summaries
+        )
     if expr.kind == "call" and isinstance(expr.payload, CallPayload):
         summary = call_summary_for(expr.payload, summaries)
         if summary is not None:

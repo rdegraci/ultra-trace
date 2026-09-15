@@ -11,6 +11,8 @@ CFGNodeKind = Literal[
     "statement",
     "condition",
     "call",
+    "await",
+    "task_hop",
     "return",
     "throw",
 ]

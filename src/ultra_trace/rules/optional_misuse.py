@@ -7,7 +7,8 @@ from ultra_trace.frontend.models import FrontendSymbol, FrontendUnit
 from ultra_trace.proofs.generator import repro_proof
 from ultra_trace.proofs.templates import prefers_xctest
 from ultra_trace.proofs.xctest import force_unwrap_xctest
-from ultra_trace.rules.coverage import allow_high
+from ultra_trace.rules.async_witness import async_path_context
+from ultra_trace.rules.coverage import allow_high_clear
 from ultra_trace.rules.emit import emit_finding
 
 RULE_ID = "swift.optional_misuse_risk"
@@ -41,21 +42,23 @@ class OptionalMisuseRiskRule:
                 events,
                 key=lambda e: (e.location.start_line, e.location.start_column),
             )[0]
-            findings.append(_finding(symbol, event, exploration.path_count))
+            findings.append(_finding(symbol, event, exploration))
         findings.sort(key=lambda f: (f.location.file_path, f.location.start_line, f.id))
         return findings
 
 
 def _finding(
-    symbol: FrontendSymbol, event: OptionalMisuseEvent, path_count: int
+    symbol: FrontendSymbol, event: OptionalMisuseEvent, exploration: ExplorationResult
 ) -> Finding:
+    uncertain, async_notes = async_path_context(exploration, event.path_node_ids)
     clear = event.nilness == "nil"
-    high = allow_high(symbol.eligibility) and clear
+    high = allow_high_clear(symbol.eligibility, uncertain_suspension=uncertain) and clear
     name = event.operand_name or "IUO value"
     path_summary = (
-        f"{len(event.path_node_ids)} nodes; {path_count} path(s); "
+        f"{len(event.path_node_ids)} nodes; {exploration.path_count} path(s); "
         f"{event.kind}; `{name}` nilness={event.nilness}"
     )
+    path_summary += async_notes
     if high and prefers_xctest(RULE_ID):
         proof = force_unwrap_xctest(
             location=event.location,

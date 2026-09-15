@@ -9,6 +9,8 @@ from ultra_trace.core.findings import (
 from ultra_trace.engine.explorer import ExplorationResult, UnwrapEvent
 from ultra_trace.frontend.models import FrontendSymbol, FrontendUnit
 from ultra_trace.proofs.generator import proof_for_force_unwrap
+from ultra_trace.rules.async_witness import async_path_context
+from ultra_trace.rules.coverage import allow_high_clear
 
 RULE_ID = "swift.force_unwrap_risk"
 
@@ -44,7 +46,7 @@ class ForceUnwrapRiskRule:
                     e.expression_id,
                 ),
             )[0]
-            findings.append(_finding_from_event(symbol, event, exploration.path_count))
+            findings.append(_finding_from_event(symbol, event, exploration))
         findings.sort(
             key=lambda f: (
                 f.location.file_path,
@@ -57,18 +59,24 @@ class ForceUnwrapRiskRule:
 
 
 def _finding_from_event(
-    symbol: FrontendSymbol, event: UnwrapEvent, path_count: int
+    symbol: FrontendSymbol, event: UnwrapEvent, exploration: ExplorationResult
 ) -> Finding:
-    clear = (
-        event.nilness in {"nil", "unknown"} and symbol.eligibility.state == "cfg-ready"
+    uncertain, async_notes = async_path_context(
+        exploration,
+        event.path_node_ids,
+        flagged=event.uncertain_suspension,
     )
-    high = clear and symbol.eligibility.unsupported_construct_count == 0
+    clear = event.nilness in {"nil", "unknown"}
+    high = allow_high_clear(
+        symbol.eligibility, uncertain_suspension=uncertain
+    ) and clear
     path_summary = (
-        f"{len(event.path_node_ids)} nodes; {path_count} path(s) explored; "
+        f"{len(event.path_node_ids)} nodes; {exploration.path_count} path(s) explored; "
         f"operand `{event.operand_name or '?'}` nilness={event.nilness}"
     )
     if event.witness_note:
         path_summary = f"{path_summary}; {event.witness_note}"
+    path_summary += async_notes
     proof = proof_for_force_unwrap(
         location=event.location,
         symbol_name=symbol.qualified_name,

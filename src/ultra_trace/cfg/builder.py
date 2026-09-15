@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from ultra_trace.cfg.models import CFGEdge, CFGNode, CFGNodeKind, ControlFlowGraph
-from ultra_trace.cfg.walk import calls_in_statement, expressions_by_id
+from ultra_trace.cfg.walk import awaits_in_statement, calls_in_statement, expressions_by_id
+from ultra_trace.engine.async_edges import task_hop_style
 from ultra_trace.frontend.ids import call_site_id
 from ultra_trace.frontend.models import (
     BlockPayload,
+    CallPayload,
     DoCatchPayload,
     FrontendSymbol,
     GuardPayload,
@@ -93,9 +95,14 @@ class _BuildState:
     def emit_calls(self, stmt: NormalizedStatement, preds: list[str]) -> list[str]:
         current = preds
         for call in calls_in_statement(stmt, self.exprs):
+            style: str | None = None
+            if isinstance(call.payload, CallPayload):
+                style = task_hop_style(call.payload.callee_text or "")
+            kind: CFGNodeKind = "task_hop" if style else "call"
+            label = style or "call"
             nid = self.add(
-                "call",
-                label="call",
+                kind,
+                label=label,
                 statement_id=stmt.statement_id,
                 expression_id=call.expression_id,
                 call_site_id_value=call_site_id(call.expression_id),
@@ -103,6 +110,21 @@ class _BuildState:
             )
             for pred in current:
                 self.edge(pred, nid, "seq")
+            current = [nid]
+        return current
+
+    def emit_awaits(self, stmt: NormalizedStatement, preds: list[str]) -> list[str]:
+        current = preds
+        for await_expr in awaits_in_statement(stmt, self.exprs):
+            nid = self.add(
+                "await",
+                label="await",
+                statement_id=stmt.statement_id,
+                expression_id=await_expr.expression_id,
+                location=await_expr.location,
+            )
+            for pred in current:
+                self.edge(pred, nid, "await")
             current = [nid]
         return current
 
@@ -125,6 +147,7 @@ class _BuildState:
             return self._emit_do_catch(stmt, stmt.payload, preds)
         if stmt.kind in {"return_statement", "throw_statement"}:
             after_calls = self.emit_calls(stmt, preds)
+            after_awaits = self.emit_awaits(stmt, after_calls)
             kind: CFGNodeKind = "return" if stmt.kind == "return_statement" else "throw"
             nid = self.add(
                 kind,
@@ -132,7 +155,7 @@ class _BuildState:
                 statement_id=stmt.statement_id,
                 location=stmt.location,
             )
-            for pred in after_calls:
+            for pred in after_awaits:
                 self.edge(pred, nid, "seq")
             exit_id = self._exit_id()
             self.edge(nid, exit_id, "seq")
@@ -149,13 +172,14 @@ class _BuildState:
             self.edge(nid, self._exit_id(), "seq")
             return []
         after_calls = self.emit_calls(stmt, preds)
+        after_awaits = self.emit_awaits(stmt, after_calls)
         nid = self.add(
             "statement",
             label=stmt.kind,
             statement_id=stmt.statement_id,
             location=stmt.location,
         )
-        for pred in after_calls:
+        for pred in after_awaits:
             self.edge(pred, nid, "seq")
         return [nid]
 

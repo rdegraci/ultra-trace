@@ -5,7 +5,8 @@ from ultra_trace.core.findings import Finding
 from ultra_trace.engine.explorer import ExplorationResult, TaintSinkEvent
 from ultra_trace.frontend.models import FrontendSymbol, FrontendUnit
 from ultra_trace.proofs.generator import repro_proof
-from ultra_trace.rules.coverage import allow_high
+from ultra_trace.rules.async_witness import async_path_context
+from ultra_trace.rules.coverage import allow_high_clear
 from ultra_trace.rules.emit import emit_finding
 from ultra_trace.taint.catalog import TaintCatalog
 
@@ -41,23 +42,29 @@ class ShallowTaintFlowRule:
                 events,
                 key=lambda e: (e.location.start_line, e.location.start_column),
             )[0]
-            findings.append(_finding(symbol, event, exploration.path_count))
+            findings.append(_finding(symbol, event, exploration))
         findings.sort(key=lambda f: (f.location.file_path, f.location.start_line, f.id))
         return findings
 
 
-def _finding(symbol: FrontendSymbol, event: TaintSinkEvent, path_count: int) -> Finding:
+def _finding(
+    symbol: FrontendSymbol, event: TaintSinkEvent, exploration: ExplorationResult
+) -> Finding:
+    uncertain, async_notes = async_path_context(exploration, event.path_node_ids)
     dangerous = event.sink_pattern in {
         "evaluateJavaScript",
         "WKWebView.loadHTMLString",
         "loadHTMLString",
     }
-    high = allow_high(symbol.eligibility) and dangerous
+    high = allow_high_clear(
+        symbol.eligibility, uncertain_suspension=uncertain
+    ) and dangerous
     sources = ", ".join(event.source_tags) or "configured source"
     path_summary = (
-        f"{len(event.path_node_ids)} nodes; {path_count} path(s); "
+        f"{len(event.path_node_ids)} nodes; {exploration.path_count} path(s); "
         f"{sources} -> {event.sink_pattern}"
     )
+    path_summary += async_notes
     proof = repro_proof(
         trigger=(
             f"Call `{symbol.qualified_name}` so tainted data from `{sources}` "

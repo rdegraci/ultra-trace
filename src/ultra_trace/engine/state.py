@@ -17,6 +17,7 @@ class SymbolicState:
     array_sizes: Mapping[str, int] = field(default_factory=dict)
     type_is: Mapping[str, str] = field(default_factory=dict)
     iuo_names: frozenset[str] = field(default_factory=frozenset)
+    uncertain_suspension: bool = False
 
     def get(self, name: str) -> Nilness:
         return self.nilness.get(name, "unknown")
@@ -64,6 +65,24 @@ class SymbolicState:
     def with_iuo(self, name: str) -> SymbolicState:
         return replace(self, iuo_names=self.iuo_names | {name})
 
+    def widen_after_suspension(self) -> SymbolicState:
+        """Conservative merge across await / Task hops (NS2).
+
+        Precise sequential facts do not survive suspension. Taint tags are kept.
+        Marks the path so High cannot be invented from pre-await certainty alone.
+        """
+        return SymbolicState(
+            nilness={},
+            taint=dict(self.taint),
+            facts={},
+            bounds_ok=frozenset(),
+            nonempty=frozenset(),
+            array_sizes={},
+            type_is={},
+            iuo_names=self.iuo_names,
+            uncertain_suspension=True,
+        )
+
     def fingerprint(self) -> tuple[object, ...]:
         return (
             tuple(sorted(self.nilness.items())),
@@ -74,4 +93,5 @@ class SymbolicState:
             tuple(sorted(self.array_sizes.items())),
             tuple(sorted(self.type_is.items())),
             tuple(sorted(self.iuo_names)),
+            self.uncertain_suspension,
         )

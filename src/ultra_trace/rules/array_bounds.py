@@ -5,7 +5,8 @@ from ultra_trace.core.findings import Finding
 from ultra_trace.engine.explorer import ExplorationResult, SubscriptEvent
 from ultra_trace.frontend.models import FrontendSymbol, FrontendUnit
 from ultra_trace.proofs.generator import repro_proof
-from ultra_trace.rules.coverage import allow_high
+from ultra_trace.rules.async_witness import async_path_context
+from ultra_trace.rules.coverage import allow_high_clear
 from ultra_trace.rules.emit import emit_finding
 
 RULE_ID = "swift.array_bounds_risk"
@@ -38,18 +39,25 @@ class ArrayBoundsRiskRule:
                 risky or events,
                 key=lambda e: (e.location.start_line, e.location.start_column),
             )[0]
-            findings.append(_finding(symbol, event, exploration.path_count))
+            findings.append(_finding(symbol, event, exploration))
         findings.sort(key=lambda f: (f.location.file_path, f.location.start_line, f.id))
         return findings
 
 
-def _finding(symbol: FrontendSymbol, event: SubscriptEvent, path_count: int) -> Finding:
-    high = allow_high(symbol.eligibility) and event.known_oob
+def _finding(
+    symbol: FrontendSymbol, event: SubscriptEvent, exploration: ExplorationResult
+) -> Finding:
+    uncertain, async_notes = async_path_context(exploration, event.path_node_ids)
+    high = allow_high_clear(
+        symbol.eligibility, uncertain_suspension=uncertain
+    ) and event.known_oob
     index = event.index_name or event.index_const or "index"
     base = event.base_name or "collection"
     path_summary = (
-        f"{len(event.path_node_ids)} nodes; {path_count} path(s); {base}[{index}]"
+        f"{len(event.path_node_ids)} nodes; {exploration.path_count} path(s); "
+        f"{base}[{index}]"
     )
+    path_summary += async_notes
     proof = repro_proof(
         trigger=(
             f"Call `{symbol.qualified_name}` with `{index}` outside `{base}` bounds "

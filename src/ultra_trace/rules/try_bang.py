@@ -7,7 +7,8 @@ from ultra_trace.frontend.models import FrontendSymbol, FrontendUnit
 from ultra_trace.proofs.generator import repro_proof
 from ultra_trace.proofs.templates import prefers_xctest
 from ultra_trace.proofs.xctest import try_bang_xctest
-from ultra_trace.rules.coverage import allow_high
+from ultra_trace.rules.async_witness import async_path_context
+from ultra_trace.rules.coverage import allow_high_clear
 from ultra_trace.rules.emit import emit_finding
 
 RULE_ID = "swift.try_bang_risk"
@@ -39,22 +40,30 @@ class TryBangRiskRule:
             )[0]
             if event.may_throw is False:
                 continue
-            findings.append(_finding(symbol, event, exploration.path_count))
+            findings.append(_finding(symbol, event, exploration))
         findings.sort(key=lambda f: (f.location.file_path, f.location.start_line, f.id))
         return findings
 
 
-def _finding(symbol: FrontendSymbol, event: TryBangEvent, path_count: int) -> Finding:
-    clear = event.may_throw is True
-    high = allow_high(symbol.eligibility) and (
-        clear or event.resolved_callee_symbol_id is None
+def _finding(
+    symbol: FrontendSymbol, event: TryBangEvent, exploration: ExplorationResult
+) -> Finding:
+    uncertain, async_notes = async_path_context(
+        exploration,
+        event.path_node_ids,
+        flagged=event.uncertain_suspension,
     )
+    clear = event.may_throw is True
+    high = allow_high_clear(
+        symbol.eligibility, uncertain_suspension=uncertain
+    ) and (clear or event.resolved_callee_symbol_id is None)
     path_summary = (
-        f"{len(event.path_node_ids)} nodes; {path_count} path(s); "
+        f"{len(event.path_node_ids)} nodes; {exploration.path_count} path(s); "
         f"try! `{event.callee_text or 'call'}`"
     )
     if event.witness_note:
         path_summary = f"{path_summary}; {event.witness_note}"
+    path_summary += async_notes
     trigger = (
         f"Call `{symbol.qualified_name}` so `{event.callee_text or 'the call'}` "
         f"throws at {event.location.file_path}:{event.location.start_line}."
