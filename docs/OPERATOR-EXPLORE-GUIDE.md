@@ -154,6 +154,7 @@ ultra-trace explore --repo-root . --output-dir /tmp/ut --fail-on-findings
 
 ## Related
 
+- Interactive loop: [OPERATOR-REPL-GUIDE.md](OPERATOR-REPL-GUIDE.md)
 - CI gate: [OPERATOR-CI-GUIDE.md](OPERATOR-CI-GUIDE.md)
 - Sample assist config: [`examples/ultra-trace-assist.yml`](../examples/ultra-trace-assist.yml)
 - Install and bootstrap: [README.md](../README.md)
