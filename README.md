@@ -1,19 +1,18 @@
 # ultra-trace
 
-Deterministic static analysis CLI for Swift (Core MVP). Product docs live in
-[`docs/cache/`](docs/cache/README.md) (local/gitignored planning tree).
+Deterministic static analysis CLI for Swift (Core) with optional Advanced SIL,
+bounded call summaries, and a Python frontend. Product planning docs live in
+[`docs/cache/`](docs/cache/README.md) (local/gitignored).
 
-**Phase 1 (Slices 1–8) is complete.** Phase 2 proof hardening is in progress:
-High crash findings prefer Tier 1 XCTest scaffolds (labeled, not auto-executed).
-There is no SIL, no call-tree descent, and only the six Core rules. Next after
-Phase 2: [`docs/cache/PHASES.md`](docs/cache/PHASES.md) Phase 5 (call summaries).
+**Phases 1–6 are complete.** Phase 7 (platform maturity) covers Mac fleet
+bootstrap, perf budgets, SARIF export, and operator security hygiene.
 
 ### Coming back later
 
 1. `source .venv/bin/activate` (or recreate venv + `pip install -e ".[dev]"`).
-2. Rebuild helper if needed: `./scripts/build_parser_helper.sh`
+2. Bootstrap helper: `./scripts/bootstrap_macos_ci.sh`
 3. Sanity: `ultra-trace analyze --config examples/ultra-trace.yml --repo-root fixtures/swift/vertical --output-dir /tmp/ut-check`
-4. Read `docs/cache/README.md` → then start Phase 2 in `docs/cache/PHASES.md`.
+4. Optional Python: add `--target-language python --repo-root fixtures/python/vertical`
 
 ## Install
 
@@ -23,11 +22,24 @@ macOS with Xcode is required to build the SwiftSyntax helper. Python 3.10–3.12
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-./scripts/build_parser_helper.sh
-python scripts/validate_parser_toolchain.py --fail-on-drift
+./scripts/bootstrap_macos_ci.sh
 ```
 
 Entry points: `ultra-trace` and `python -m ultra_trace`.
+
+### Mac fleet / CI bootstrap
+
+| Step | Command |
+|---|---|
+| Build + pin helper | `./scripts/bootstrap_macos_ci.sh` |
+| Fail on helper drift | `python scripts/validate_parser_toolchain.py --fail-on-drift` |
+| Probe SIL (optional) | `python scripts/validate_sil_toolchain.py` |
+| Require SIL for Advanced fleets | `python scripts/validate_sil_toolchain.py --require` |
+| Perf budgets | `python scripts/bench_analyze.py` |
+
+Pins: [`toolchain-pins/parser-helper.json`](toolchain-pins/parser-helper.json),
+[`toolchain-pins/sil-toolchain.json`](toolchain-pins/sil-toolchain.json),
+[`toolchain-pins/perf-budgets.json`](toolchain-pins/perf-budgets.json).
 
 ## Bootstrap Application Support
 
@@ -60,7 +72,19 @@ ultra-trace analyze \
   --analysis-mode core
 ```
 
-Representative fixtures (licensed in-repo corpus-spike stand-ins):
+Python target (no Swift helper):
+
+```bash
+ultra-trace analyze \
+  --config examples/ultra-trace.yml \
+  --repo-root /path/to/python/repo \
+  --target-language python \
+  --output-dir /tmp/ultra-trace \
+  --privacy-mode offline \
+  --no-llm
+```
+
+Representative fixtures:
 
 ```bash
 ./scripts/ci_analyze_samples.sh
@@ -80,7 +104,8 @@ Writes under `--output-dir` (basename `--output-basename`, default
 |---|---|
 | `*.md` | Executive summary, findings, eligibility / unsupported counts |
 | `*.json` | Schema 1.0 payload for CI |
-| `*-proofs/*.md` | Supported proof artifacts for High findings (Tier 1 XCTest scaffolds when justified; otherwise repro/path witness) |
+| `*.sarif.json` | Optional SARIF 2.1.0 (`--format sarif`) |
+| `*-proofs/*.md` | Supported proof artifacts for High findings (XCTest/pytest scaffolds when justified; otherwise repro/path witness) |
 
 Authoritative fields are analyzer-owned. Any LLM prose is advisory only and never
 changes severity, confidence, or proof tier/support.
@@ -90,8 +115,7 @@ changes severity, confidence, or proof tier/support.
 ```bash
 # macOS + Xcode required for the SwiftSyntax helper
 source .venv/bin/activate
-./scripts/build_parser_helper.sh
-python scripts/validate_parser_toolchain.py --fail-on-drift
+./scripts/bootstrap_macos_ci.sh
 
 ultra-trace analyze \
   --config examples/ultra-trace.yml \
@@ -103,30 +127,40 @@ ultra-trace analyze \
   --severity-threshold medium
 # Exit 1 = findings at/above threshold (expected for gate jobs).
 # Do NOT pass --fail-on-partial-analysis on nightly (unsupported Swift is reported).
-# Do NOT auto-execute generated *-proofs XCTest scaffolds.
+# Do NOT auto-execute generated *-proofs XCTest/pytest scaffolds.
 ```
 
-Proof tiers: Tier 1 = XCTest scaffold (`kind: xctest`, `language: swift`);
-Tier 2 = repro steps; Tier 3 = path witness; Tier 4 = unsupported (forces
-severity below High). Generated XCTest code is labeled for human review.
+Proof tiers: Tier 1 = runnable scaffold (`xctest` / `pytest`); Tier 2 = repro
+steps; Tier 3 = path witness; Tier 4 = unsupported (forces severity below High).
+Generated proof code is labeled for human review.
 
 ```bash
 ultra-trace report --input /tmp/ultra-trace/ultra-trace-report.json \
   --format markdown --stdout
+ultra-trace report --input /tmp/ultra-trace/ultra-trace-report.json \
+  --format sarif --output /tmp/ultra-trace/report.sarif.json
 ultra-trace list-rules
 ```
+
+## Secrets & privacy
+
+- Store API keys only in the appdir `.env`, never in YAML or proof artifacts.
+- `privacyMode: offline` blocks network and forces LLM off.
+- `redacted` / `full-assist` sanitize outbound LLM text (secret patterns,
+  Slack/GitHub tokens, long opaque tokens, line/length caps).
+- Do not commit `*-proofs/`, plan JSON with client code, or `.env` files.
+- Review generated proof scaffolds before running them locally.
 
 ## CI
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) is the template:
 
 - Ubuntu: `ruff check`, `ruff format --check`, `mypy`, `pytest` (helper tests skip).
-- **macOS 15 + Xcode** for the Swift helper, pin validation
-  (`--fail-on-drift`), full pytest, and e2e analyze.
+- **macOS 15 + Xcode** for helper bootstrap, pin validation (`--fail-on-drift`),
+  SIL probe, full pytest, e2e analyze, and perf budget reporting.
 
 Nightly defaults match [`examples/ultra-trace.yml`](examples/ultra-trace.yml):
-Core, offline, LLM off. Pin:
-[`toolchain-pins/parser-helper.json`](toolchain-pins/parser-helper.json).
+Core, offline, LLM off.
 
 ```bash
 ruff check src tests scripts
@@ -135,14 +169,13 @@ mypy
 pytest -q
 ```
 
-## Known limitations (MVP)
+## Known limitations
 
-- Core rules only: force unwrap, `try!`, `as!`, array bounds, shallow taint, dead branch.
-- Intra-procedural paths; no callee descent / call-tree simulation.
-- No SIL / Advanced mode.
-- Unsupported constructs (macros, result builders, …) are recorded; confidence
-  is degraded. They do not justify High findings.
-- Call resolution is best-effort same-module name match.
+- Core defaults stay intra-procedural; enable `callSummary` for bounded summaries.
+- Advanced SIL needs Mac `swiftc`; falls back to Core when unavailable.
+- Unsupported constructs are recorded; confidence degrades. They do not justify
+  High findings alone.
+- Unresolved callees / unknown facts must not raise severity.
 - LLM assist is optional and non-authoritative. Offline wins over `--llm-enabled`.
 
 ## LLM assist (optional)
@@ -162,13 +195,12 @@ ultra-trace analyze --privacy-mode redacted --llm-enabled \
 ## Parser helper
 
 ```bash
-./scripts/build_parser_helper.sh
+./scripts/bootstrap_macos_ci.sh
 python scripts/validate_parser_toolchain.py --fail-on-drift
 ```
 
 - Helper: [`swift-parser-helper/`](swift-parser-helper/)
-- Invocation: [`docs/cache/PARSER-HELPER-INVOCATION.md`](docs/cache/PARSER-HELPER-INVOCATION.md)
-- Corpus spike: [`docs/cache/spikes/PARSER-CORPUS-SPIKE.md`](docs/cache/spikes/PARSER-CORPUS-SPIKE.md)
+- Toolchain notes: [`swift-parser-helper/TOOLCHAIN.md`](swift-parser-helper/TOOLCHAIN.md)
 
 Downstream code imports `ultra_trace.frontend` only. Map helper JSON with
 `ultra_trace.swift_frontend.normalize_helper_output`.

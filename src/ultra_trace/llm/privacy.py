@@ -8,6 +8,8 @@ from ultra_trace.llm.features import allowed_subset
 
 _SECRET_RE = re.compile(
     r"(?i)(api[_-]?key|authorization|bearer|sk-[A-Za-z0-9]{8,}"
+    r"|xox[baprs]-[A-Za-z0-9-]{10,}"
+    r"|gh[pousr]_[A-Za-z0-9]{20,}"
     r"|-----BEGIN [A-Z ]*PRIVATE KEY-----)"
 )
 _LONG_TOKEN_RE = re.compile(r"\b[A-Za-z0-9_\-]{32,}\b")

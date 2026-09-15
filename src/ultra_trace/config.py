@@ -15,7 +15,7 @@ from ultra_trace.taint.defaults import (
 
 PrivacyMode = Literal["offline", "redacted", "full-assist"]
 SeverityLevel = Literal["low", "medium", "high", "critical"]
-OutputFormat = Literal["markdown", "json"]
+OutputFormat = Literal["markdown", "json", "sarif"]
 AnalysisMode = Literal["core", "advanced"]
 RulePack = Literal["core", "advanced"]
 TargetLanguage = Literal["swift", "python"]

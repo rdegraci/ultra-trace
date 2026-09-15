@@ -11,6 +11,7 @@ from ultra_trace.proofs.generator import write_proof_file
 from ultra_trace.reporting.json_report import report_json
 from ultra_trace.reporting.markdown import markdown_from_payload
 from ultra_trace.reporting.ordering import sort_findings
+from ultra_trace.reporting.sarif import build_sarif
 from ultra_trace.swift_frontend import normalize_helper_output
 
 
@@ -18,6 +19,7 @@ from ultra_trace.swift_frontend import normalize_helper_output
 class ReportWriteResult:
     markdown_path: Path | None
     json_path: Path | None
+    sarif_path: Path | None = None
     proof_paths: tuple[Path, ...] = ()
 
 
@@ -67,6 +69,7 @@ def write_reports(
     output_dir.mkdir(parents=True, exist_ok=True)
     md_path: Path | None = None
     json_path: Path | None = None
+    sarif_path: Path | None = None
     proof_paths: list[Path] = []
 
     if result is None:
@@ -110,6 +113,14 @@ def write_reports(
                 encoding="utf-8",
             )
 
+    if "sarif" in formats:
+        sarif_path = output_dir / f"{basename}.sarif.json"
+        if not dry_run:
+            sarif_path.write_text(
+                json.dumps(build_sarif(payload), indent=2, sort_keys=False) + "\n",
+                encoding="utf-8",
+            )
+
     if not dry_run:
         proofs_dir = output_dir / f"{basename}-proofs"
         for finding in sort_findings(result.findings):
@@ -127,7 +138,10 @@ def write_reports(
             )
 
     return ReportWriteResult(
-        markdown_path=md_path, json_path=json_path, proof_paths=tuple(proof_paths)
+        markdown_path=md_path,
+        json_path=json_path,
+        sarif_path=sarif_path,
+        proof_paths=tuple(proof_paths),
     )
 
 

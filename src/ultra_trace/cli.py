@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 _SEVERITIES = {"low", "medium", "high", "critical"}
 _PRIVACY = {"offline", "redacted", "full-assist"}
-_FORMATS = {"markdown", "json"}
+_FORMATS = {"markdown", "json", "sarif"}
 _MODES = {"core", "advanced"}
 _PROVIDERS = {"anthropic", "openai", "openai-compatible"}
 _LANGUAGES = {"swift", "python"}
@@ -102,7 +102,7 @@ def analyze(
         "ultra-trace-report", "--output-basename", help="Report basename"
     ),
     format: Optional[list[str]] = typer.Option(
-        None, "--format", help="Repeatable: markdown|json"
+        None, "--format", help="Repeatable: markdown|json|sarif"
     ),
     max_depth: Optional[int] = typer.Option(None, "--max-depth"),
     focus_module: Optional[list[str]] = typer.Option(None, "--focus-module"),
@@ -152,10 +152,10 @@ def analyze(
     formats: list[OutputFormat] | None = None
     if format:
         if any(item not in _FORMATS for item in format):
-            raise typer.BadParameter("--format must be markdown and/or json")
+            raise typer.BadParameter("--format must be markdown, json, and/or sarif")
         formats = [f for f in format if f in _FORMATS]  # type: ignore[misc]
         if not formats:
-            raise typer.BadParameter("--format must be markdown and/or json")
+            raise typer.BadParameter("--format must be markdown, json, and/or sarif")
 
     modes: list[AnalysisMode] | None = None
     if analysis_mode:
@@ -294,6 +294,8 @@ def analyze(
         typer.echo(f"Wrote {written.markdown_path}")
     if written.json_path:
         typer.echo(f"Wrote {written.json_path}")
+    if written.sarif_path:
+        typer.echo(f"Wrote {written.sarif_path}")
     for proof_path in written.proof_paths:
         typer.echo(f"Wrote {proof_path}")
     typer.echo(f"Findings: {len(analysis.findings)} (paths={analysis.paths_explored})")
@@ -313,9 +315,9 @@ def report_cmd(
     output: Optional[Path] = typer.Option(None, "--output"),
     stdout: bool = typer.Option(False, "--stdout"),
 ) -> None:
-    """Re-render a markdown or JSON report from analysis JSON."""
+    """Re-render a markdown, JSON, or SARIF report from analysis JSON."""
     if format not in _FORMATS:
-        raise typer.BadParameter("--format must be markdown or json")
+        raise typer.BadParameter("--format must be markdown, json, or sarif")
     if not stdout and output is None:
         raise typer.BadParameter("Provide --output or --stdout")
 
@@ -326,6 +328,10 @@ def report_cmd(
         normalized = normalize_report_payload(payload)
         if format == "json":
             body = json.dumps(normalized, indent=2, sort_keys=False) + "\n"
+        elif format == "sarif":
+            from ultra_trace.reporting.sarif import build_sarif
+
+            body = json.dumps(build_sarif(normalized), indent=2, sort_keys=False) + "\n"
         else:
             body = markdown_from_payload(normalized)
     except typer.BadParameter:
