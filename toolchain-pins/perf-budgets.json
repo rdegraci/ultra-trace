@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "notes": "Wall-clock budgets for scripts/bench_analyze.py. Times are seconds on a typical Mac CI runner; use --fail-on-budget only in optional jobs.",
+  "budgets": {
+    "core_vertical": {
+      "label": "Core vertical fixtures",
+      "max_seconds": 45.0,
+      "repo_relative": "fixtures/swift/vertical",
+      "analysis_modes": ["core"],
+      "target_language": "swift"
+    },
+    "core_corpus": {
+      "label": "Core corpus spike fixtures",
+      "max_seconds": 90.0,
+      "repo_relative": "fixtures/corpus",
+      "analysis_modes": ["core"],
+      "target_language": "swift"
+    },
+    "python_vertical": {
+      "label": "Python vertical fixtures",
+      "max_seconds": 20.0,
+      "repo_relative": "fixtures/python/vertical",
+      "analysis_modes": ["core"],
+      "target_language": "python"
+    }
+  }
+}
