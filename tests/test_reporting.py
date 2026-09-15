@@ -111,6 +111,9 @@ def test_report_json_schema_core_fields() -> None:
     for key in ("parsed", "normalized", "cfg-ready", "partially-analyzed", "skipped"):
         assert key in frontend["eligibility_counts"]
     assert "unresolved" in frontend["call_resolution"]
+    assert "unresolved_ratio" in frontend["call_resolution"]
+    assert "call_summary" in frontend
+    assert frontend["call_summary"]["enabled"] is False
 
 
 def test_markdown_separates_authoritative_from_advisory() -> None:

@@ -76,6 +76,21 @@ class BoundedCallSummaryProvider:
     def summary_for(self, symbol_id: str) -> FunctionSummary:
         return self._summary(symbol_id, self._max_depth)
 
+    def summary_for_callee_text(self, callee_text: str) -> FunctionSummary:
+        """SDK stub lookup for unresolved or text-only call sites."""
+        effect = self._sdk.lookup_callee_text(callee_text)
+        if effect is None:
+            return _unknown_summary(f"unresolved:{callee_text}")
+        return _summary_from_effect(f"sdk:{callee_text}", effect)
+
+    @property
+    def sdk_catalog_version(self) -> str:
+        return self._sdk.version
+
+    @property
+    def sdk_effect_count(self) -> int:
+        return len(self._sdk.by_name)
+
     def _summary(self, symbol_id: str, remaining: int) -> FunctionSummary:
         key = (symbol_id, remaining)
         cached = self._cache.get(key)

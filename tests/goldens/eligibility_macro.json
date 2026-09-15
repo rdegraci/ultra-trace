@@ -23,6 +23,15 @@
     "unresolved": 0,
     "ambiguous": 0,
     "unsupported": 0,
-    "total": 0
+    "total": 0,
+    "resolved_ratio": 0.0,
+    "unresolved_ratio": 0.0,
+    "ambiguous_ratio": 0.0
+  },
+  "call_summary": {
+    "enabled": false,
+    "max_depth": 0,
+    "sdk_catalog_version": null,
+    "sdk_effect_count": 0
   }
 }

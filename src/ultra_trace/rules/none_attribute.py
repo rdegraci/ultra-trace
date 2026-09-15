@@ -68,6 +68,8 @@ def _finding_from_event(
         f"{len(event.path_node_ids)} nodes; {path_count} path(s) explored; "
         f"base `{event.operand_name or '?'}` nilness={event.nilness}"
     )
+    if event.witness_note:
+        path_summary = f"{path_summary}; {event.witness_note}"
     if high and prefers_pytest(RULE_ID):
         proof = none_attribute_pytest(
             location=event.location,

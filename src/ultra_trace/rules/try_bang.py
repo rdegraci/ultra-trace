@@ -53,15 +53,23 @@ def _finding(symbol: FrontendSymbol, event: TryBangEvent, path_count: int) -> Fi
         f"{len(event.path_node_ids)} nodes; {path_count} path(s); "
         f"try! `{event.callee_text or 'call'}`"
     )
+    if event.witness_note:
+        path_summary = f"{path_summary}; {event.witness_note}"
     trigger = (
         f"Call `{symbol.qualified_name}` so `{event.callee_text or 'the call'}` "
         f"throws at {event.location.file_path}:{event.location.start_line}."
     )
     expected = "Process crashes on uncaught error from try!."
-    assumptions = (
-        "Local intra-procedural facts only; no callee descent.",
-        "A throwing target is assumed when not proven non-throwing.",
-    )
+    if event.witness_note:
+        assumptions = (
+            "Bounded call-summary / SDK facts contributed to may_throw.",
+            "A throwing target is assumed when not proven non-throwing.",
+        )
+    else:
+        assumptions = (
+            "Local intra-procedural facts only; no callee descent.",
+            "A throwing target is assumed when not proven non-throwing.",
+        )
     if high and prefers_xctest(RULE_ID):
         proof = try_bang_xctest(
             location=event.location,

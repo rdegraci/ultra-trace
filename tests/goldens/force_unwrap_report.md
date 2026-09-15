@@ -11,7 +11,8 @@ Static analysis is authoritative. Coverage limits below are blind spots, not sil
 - Findings by severity: critical=0, high=2, medium=0, low=0
 - Eligibility: parsed=0, normalized=0, cfg-ready=5, partially-analyzed=0, skipped=0
 - Unsupported constructs: total=0
-- Call resolution: resolved=0, unresolved=0, ambiguous=0, total=0
+- Call resolution: resolved=0, unresolved=0, ambiguous=0, total=0, unresolved_ratio=0.0
+- Call summary: enabled=False, max_depth=0, sdk_catalog_version=None, sdk_effect_count=0
 
 ## Top Findings
 | Severity | Location | Bug Type | Confidence | Proof Tier |
@@ -27,6 +28,7 @@ Static analysis is authoritative. Coverage limits below are blind spots, not sil
 - **Severity**: high
 - **Confidence**: high
 - **Description**: `!` force unwrap in `loadTitle` cannot be proven non-nil on an explored path (unknown). 2 nodes; 1 path(s) explored; operand `value` nilness=unknown
+- **Path**: 2 nodes; 1 path(s) explored; operand `value` nilness=unknown
 - **Risk**: The process can crash if the optional is nil at this site.
 - **Proof Tier**: Tier 1 (supported)
 - **Proof**:
@@ -60,6 +62,7 @@ Static analysis is authoritative. Coverage limits below are blind spots, not sil
 - **Severity**: high
 - **Confidence**: high
 - **Description**: `!` force unwrap in `alwaysNil` cannot be proven non-nil on an explored path (nil). 3 nodes; 1 path(s) explored; operand `value` nilness=nil
+- **Path**: 3 nodes; 1 path(s) explored; operand `value` nilness=nil
 - **Risk**: The process can crash if the optional is nil at this site.
 - **Proof Tier**: Tier 1 (supported)
 - **Proof**:
@@ -102,5 +105,6 @@ Static analysis is authoritative. Coverage limits below are blind spots, not sil
 - Resolved plan id: default-offline
 - Eligibility counts: parsed=0, normalized=0, cfg-ready=5, partially-analyzed=0, skipped=0
 - Unsupported constructs: total=0
-- Unresolved calls: 0 unresolved / 0 ambiguous / 0 total
+- Unresolved calls: 0 unresolved / 0 ambiguous / 0 total (unresolved_ratio=0.0)
+- Call summary: enabled=False, max_depth=0, sdk=None
 - Notes: none

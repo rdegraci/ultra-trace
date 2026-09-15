@@ -11,6 +11,7 @@ from ultra_trace.frontend.models import SourceSpan
 from ultra_trace.llm.models import AdvisoryItem
 from ultra_trace.reporting.coverage import (
     call_resolution_counts,
+    call_summary_report,
     coverage_notes,
     eligibility_counts,
     unsupported_summary,
@@ -136,13 +137,16 @@ def _warnings_for(result: AnalysisResult) -> list[dict[str, object]]:
             }
         )
     calls = call_resolution_counts(result.unit)
-    if calls["unresolved"] or calls["ambiguous"]:
+    unresolved = calls["unresolved"]
+    ambiguous = calls["ambiguous"]
+    if unresolved or ambiguous:
         warnings.append(
             {
                 "code": "frontend.unresolved_calls",
                 "message": (
-                    f"{calls['unresolved']} unresolved and {calls['ambiguous']} "
-                    "ambiguous call site(s)."
+                    f"{unresolved} unresolved and {ambiguous} "
+                    f"ambiguous call site(s) "
+                    f"(unresolved_ratio={calls['unresolved_ratio']})."
                 ),
                 "location": None,
             }
@@ -224,6 +228,15 @@ def report_json(
                 "paths_explored_advanced": 0,
             },
         }
+    if result.call_summary is not None:
+        call_summary_block = call_summary_report(
+            enabled=result.call_summary.enabled,
+            max_depth=result.call_summary.max_depth,
+            sdk_catalog_version=result.call_summary.sdk_catalog_version,
+            sdk_effect_count=result.call_summary.sdk_effect_count,
+        )
+    else:
+        call_summary_block = call_summary_report()
     return {
         "schema_version": "1.0",
         "generated_at": stamp,
@@ -257,6 +270,7 @@ def report_json(
                 "eligibility_counts": eligibility_counts(unit),
                 "unsupported_constructs": unsupported_summary(unit),
                 "call_resolution": call_resolution_counts(unit),
+                "call_summary": call_summary_block,
             },
             "advanced": advanced_block,
             "llm": _llm_fields(

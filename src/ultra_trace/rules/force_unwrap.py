@@ -67,6 +67,8 @@ def _finding_from_event(
         f"{len(event.path_node_ids)} nodes; {path_count} path(s) explored; "
         f"operand `{event.operand_name or '?'}` nilness={event.nilness}"
     )
+    if event.witness_note:
+        path_summary = f"{path_summary}; {event.witness_note}"
     proof = proof_for_force_unwrap(
         location=event.location,
         symbol_name=symbol.qualified_name,

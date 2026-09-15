@@ -78,7 +78,7 @@ def test_path_briefs_empty_when_offline() -> None:
 
 def test_expanded_sdk_stubs_cover_uikit_and_foundation() -> None:
     catalog = SDKEffectCatalog.default()
-    assert catalog.version == "1.1"
+    assert catalog.version == "1.2"
     assert catalog.lookup_callee_text("UITextField.text") is not None
     assert catalog.lookup_callee_text("UITextField.text").may_return_nil is True
     assert catalog.lookup_callee_text("UserDefaults.string").may_return_nil is True

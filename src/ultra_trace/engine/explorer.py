@@ -12,11 +12,14 @@ from ultra_trace.engine.exprs import expr_text, ident_name
 from ultra_trace.engine.facts import (
     apply_condition_facts,
     array_literal_size,
+    call_summary_for,
     eval_const,
     eval_nilness,
     eval_taint,
     evaluate_condition,
+    nilness_witness_note,
     subscript_safety,
+    throw_witness_note,
 )
 from ultra_trace.engine.state import Nilness, SymbolicState
 from ultra_trace.frontend.models import (
@@ -46,6 +49,7 @@ class UnwrapEvent:
     nilness: Nilness
     location: SourceSpan
     path_node_ids: tuple[str, ...]
+    witness_note: str | None = None
 
 
 @dataclass(frozen=True)
@@ -56,6 +60,7 @@ class TryBangEvent:
     resolved_callee_symbol_id: str | None
     may_throw: bool | None
     path_node_ids: tuple[str, ...]
+    witness_note: str | None = None
 
 
 @dataclass(frozen=True)
@@ -582,7 +587,7 @@ def _unwrap_events(
 ) -> tuple[UnwrapEvent, ...]:
     events: list[UnwrapEvent] = []
     for unwrap in unwraps_in_statement(stmt, exprs):
-        name, nilness = _unwrap_operand(unwrap, exprs, state, summaries)
+        name, nilness, note = _unwrap_operand(unwrap, exprs, state, summaries)
         events.append(
             UnwrapEvent(
                 expression_id=unwrap.expression_id,
@@ -590,6 +595,7 @@ def _unwrap_events(
                 nilness=nilness,
                 location=unwrap.location,
                 path_node_ids=trail,
+                witness_note=note,
             )
         )
     return tuple(events)
@@ -600,18 +606,25 @@ def _unwrap_operand(
     exprs: dict[str, NormalizedExpression],
     state: SymbolicState,
     summaries: FunctionSummaryProvider | None = None,
-) -> tuple[str | None, Nilness]:
+) -> tuple[str | None, Nilness, str | None]:
     if (
         isinstance(unwrap.payload, WrapperPayload)
         and unwrap.payload.operand_expression_id
     ):
         operand = exprs.get(unwrap.payload.operand_expression_id)
         if operand and isinstance(operand.payload, IdentifierPayload):
-            return operand.payload.name, state.get(operand.payload.name)
-        return None, eval_nilness(
-            unwrap.payload.operand_expression_id, exprs, state, summaries
+            return operand.payload.name, state.get(operand.payload.name), None
+        note: str | None = None
+        if operand and isinstance(operand.payload, CallPayload):
+            note = nilness_witness_note(call_summary_for(operand.payload, summaries))
+        return (
+            None,
+            eval_nilness(
+                unwrap.payload.operand_expression_id, exprs, state, summaries
+            ),
+            note,
         )
-    return None, "unknown"
+    return None, "unknown", None
 
 
 def _try_bang_event(
@@ -623,14 +636,16 @@ def _try_bang_event(
     callee_text = ""
     resolved: str | None = None
     may_throw: bool | None = None
+    note: str | None = None
     if isinstance(expr.payload, TryPayload) and expr.payload.operand_expression_id:
         operand = exprs.get(expr.payload.operand_expression_id)
         if operand and isinstance(operand.payload, CallPayload):
             callee_text = operand.payload.callee_text
             resolved = operand.payload.resolved_callee_symbol_id
-            if resolved:
-                summary = summaries.summary_for(resolved)
+            summary = call_summary_for(operand.payload, summaries)
+            if summary is not None:
                 may_throw = summary.may_throw
+                note = throw_witness_note(summary)
         else:
             callee_text = expr_text(expr.payload.operand_expression_id, exprs)
     return TryBangEvent(
@@ -640,4 +655,5 @@ def _try_bang_event(
         resolved_callee_symbol_id=resolved,
         may_throw=may_throw,
         path_node_ids=trail,
+        witness_note=note,
     )

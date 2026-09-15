@@ -28,13 +28,47 @@ def unsupported_summary(unit: FrontendUnit) -> dict[str, object]:
     return {"total": len(unit.unsupported_constructs), "by_kind": ordered}
 
 
-def call_resolution_counts(unit: FrontendUnit) -> dict[str, int]:
-    counts = {"resolved": 0, "unresolved": 0, "ambiguous": 0, "unsupported": 0}
+def call_resolution_counts(unit: FrontendUnit) -> dict[str, int | float]:
+    resolved = 0
+    unresolved = 0
+    ambiguous = 0
+    unsupported = 0
     for rec in unit.call_sites.records:
         status = rec.resolution_status
-        counts[status] = counts.get(status, 0) + 1
-    counts["total"] = len(unit.call_sites.records)
-    return counts
+        if status == "resolved":
+            resolved += 1
+        elif status == "unresolved":
+            unresolved += 1
+        elif status == "ambiguous":
+            ambiguous += 1
+        elif status == "unsupported":
+            unsupported += 1
+    total = len(unit.call_sites.records)
+    return {
+        "resolved": resolved,
+        "unresolved": unresolved,
+        "ambiguous": ambiguous,
+        "unsupported": unsupported,
+        "total": total,
+        "resolved_ratio": round(resolved / total, 4) if total else 0.0,
+        "unresolved_ratio": round(unresolved / total, 4) if total else 0.0,
+        "ambiguous_ratio": round(ambiguous / total, 4) if total else 0.0,
+    }
+
+
+def call_summary_report(
+    *,
+    enabled: bool = False,
+    max_depth: int = 0,
+    sdk_catalog_version: str | None = None,
+    sdk_effect_count: int = 0,
+) -> dict[str, object]:
+    return {
+        "enabled": enabled,
+        "max_depth": max_depth,
+        "sdk_catalog_version": sdk_catalog_version,
+        "sdk_effect_count": sdk_effect_count,
+    }
 
 
 def has_partial_analysis(unit: FrontendUnit) -> bool:
@@ -56,9 +90,14 @@ def coverage_notes(unit: FrontendUnit) -> tuple[str, ...]:
     total_uns = raw_total if isinstance(raw_total, int) else 0
     if total_uns:
         notes.append(f"{total_uns} unsupported construct(s) recorded.")
-    if calls["unresolved"] or calls["ambiguous"]:
+    unresolved = calls["unresolved"]
+    ambiguous = calls["ambiguous"]
+    total_calls = calls["total"]
+    if unresolved or ambiguous:
+        ratio = calls["unresolved_ratio"]
         notes.append(
-            f"{calls['unresolved']} unresolved and {calls['ambiguous']} "
-            "ambiguous call site(s); no callee descent."
+            f"{unresolved} unresolved and {ambiguous} ambiguous call site(s) "
+            f"of {total_calls} total "
+            f"(unresolved_ratio={ratio}); no silent callee invention."
         )
     return tuple(notes)

@@ -31,6 +31,16 @@ from ultra_trace.taint.defaults import (
 
 
 @dataclass(frozen=True)
+class CallSummaryMeta:
+    """Operator-visible call-summary / SDK settings used for this run."""
+
+    enabled: bool
+    max_depth: int
+    sdk_catalog_version: str | None
+    sdk_effect_count: int
+
+
+@dataclass(frozen=True)
 class AnalysisResult:
     unit: FrontendUnit
     findings: tuple[Finding, ...]
@@ -41,6 +51,7 @@ class AnalysisResult:
     llm: LLMRunMetadata | None = None
     resolved_plan: ExplorationPlan | None = None
     advanced: AdvancedStatus | None = None
+    call_summary: CallSummaryMeta | None = None
 
 
 def analyze_unit(
@@ -67,6 +78,16 @@ def analyze_unit(
         enabled=summary_cfg.enabled,
         max_depth=summary_cfg.max_depth,
         sdk_catalog=sdk,
+    )
+    summary_meta = CallSummaryMeta(
+        enabled=summary_cfg.enabled,
+        max_depth=summary_cfg.max_depth if summary_cfg.enabled else 0,
+        sdk_catalog_version=getattr(summaries, "sdk_catalog_version", None)
+        if sdk is not None
+        else None,
+        sdk_effect_count=int(getattr(summaries, "sdk_effect_count", 0))
+        if sdk is not None
+        else 0,
     )
     explorer = PathExplorer(
         max_depth=max_depth, summaries=summaries, taint_catalog=catalog
@@ -125,6 +146,7 @@ def analyze_unit(
         files_discovered=files_discovered
         if files_discovered is not None
         else len(unit.files),
+        call_summary=summary_meta,
     )
 
 

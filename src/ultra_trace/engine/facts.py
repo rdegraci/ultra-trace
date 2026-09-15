@@ -25,11 +25,49 @@ from ultra_trace.frontend.models import (
     UnknownExprPayload,
     WrapperPayload,
 )
-from ultra_trace.frontend.summaries import FunctionSummaryProvider
+from ultra_trace.frontend.summaries import FunctionSummary, FunctionSummaryProvider
 from ultra_trace.taint.catalog import TaintCatalog
 
 _IS_CHECK = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s+is\s+([A-Za-z_][A-Za-z0-9_.]*)$")
 _LET_BIND = re.compile(r"\blet\s+([A-Za-z_][A-Za-z0-9_]*)")
+
+
+def call_summary_for(
+    payload: CallPayload,
+    summaries: FunctionSummaryProvider | None,
+) -> FunctionSummary | None:
+    """Resolve a call summary from a project symbol or SDK callee text."""
+    if summaries is None:
+        return None
+    if (
+        payload.resolved_callee_symbol_id
+        and payload.resolution_status == "resolved"
+    ):
+        return summaries.summary_for(payload.resolved_callee_symbol_id)
+    lookup = getattr(summaries, "summary_for_callee_text", None)
+    if callable(lookup) and payload.callee_text:
+        result = lookup(payload.callee_text)
+        if isinstance(result, FunctionSummary):
+            return result
+    return None
+
+
+def nilness_witness_note(summary: FunctionSummary | None) -> str | None:
+    """Grounded path-summary fragment when a summary drove nilness facts."""
+    if summary is None or summary.may_return_nil is None:
+        return None
+    source = "sdk stub" if summary.symbol_id.startswith("sdk:") else "callee summary"
+    flag = "true" if summary.may_return_nil else "false"
+    return f"{source} may_return_nil={flag}"
+
+
+def throw_witness_note(summary: FunctionSummary | None) -> str | None:
+    """Grounded path-summary fragment when a summary drove may_throw facts."""
+    if summary is None or summary.may_throw is None:
+        return None
+    source = "sdk stub" if summary.symbol_id.startswith("sdk:") else "callee summary"
+    flag = "true" if summary.may_throw else "false"
+    return f"{source} may_throw={flag}"
 
 
 def eval_nilness(
@@ -49,18 +87,13 @@ def eval_nilness(
         return "non_nil"
     if expr.kind == "nil_coalescing":
         return "non_nil"
-    if (
-        expr.kind == "call"
-        and isinstance(expr.payload, CallPayload)
-        and summaries is not None
-        and expr.payload.resolved_callee_symbol_id
-        and expr.payload.resolution_status == "resolved"
-    ):
-        summary = summaries.summary_for(expr.payload.resolved_callee_symbol_id)
-        if summary.may_return_nil is True:
-            return "unknown"
-        if summary.may_return_nil is False:
-            return "non_nil"
+    if expr.kind == "call" and isinstance(expr.payload, CallPayload):
+        summary = call_summary_for(expr.payload, summaries)
+        if summary is not None:
+            if summary.may_return_nil is True:
+                return "unknown"
+            if summary.may_return_nil is False:
+                return "non_nil"
     return "unknown"
 
 

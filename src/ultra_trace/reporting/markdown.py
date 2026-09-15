@@ -15,6 +15,7 @@ def markdown_from_payload(payload: Mapping[str, Any]) -> str:
     elig = _map(frontend.get("eligibility_counts"))
     uns = _map(frontend.get("unsupported_constructs"))
     calls = _map(frontend.get("call_resolution"))
+    call_summary = _map(frontend.get("call_summary"))
     llm = _map(analysis.get("llm"))
     raw_findings = data.get("findings", [])
     findings = sort_finding_dicts(
@@ -63,7 +64,15 @@ def markdown_from_payload(payload: Mapping[str, Any]) -> str:
             f"resolved={calls.get('resolved', 0)}, "
             f"unresolved={calls.get('unresolved', 0)}, "
             f"ambiguous={calls.get('ambiguous', 0)}, "
-            f"total={calls.get('total', 0)}"
+            f"total={calls.get('total', 0)}, "
+            f"unresolved_ratio={calls.get('unresolved_ratio', 0.0)}"
+        ),
+        (
+            "- Call summary: "
+            f"enabled={call_summary.get('enabled', False)}, "
+            f"max_depth={call_summary.get('max_depth', 0)}, "
+            f"sdk_catalog_version={call_summary.get('sdk_catalog_version')}, "
+            f"sdk_effect_count={call_summary.get('sdk_effect_count', 0)}"
         ),
         "",
         "## Top Findings",
@@ -105,6 +114,7 @@ def markdown_from_payload(payload: Mapping[str, Any]) -> str:
                 f"- **Severity**: {finding.get('severity')}",
                 f"- **Confidence**: {finding.get('confidence')}",
                 f"- **Description**: {finding.get('description')}",
+                f"- **Path**: {finding.get('path_summary')}",
                 f"- **Risk**: {finding.get('risk')}",
                 f"- **Proof Tier**: Tier {proof.get('tier')} ({avail})",
                 "- **Proof**:",
@@ -159,7 +169,14 @@ def markdown_from_payload(payload: Mapping[str, Any]) -> str:
                 "- Unresolved calls: "
                 f"{calls.get('unresolved', 0)} unresolved / "
                 f"{calls.get('ambiguous', 0)} ambiguous / "
-                f"{calls.get('total', 0)} total"
+                f"{calls.get('total', 0)} total "
+                f"(unresolved_ratio={calls.get('unresolved_ratio', 0.0)})"
+            ),
+            (
+                "- Call summary: "
+                f"enabled={call_summary.get('enabled', False)}, "
+                f"max_depth={call_summary.get('max_depth', 0)}, "
+                f"sdk={call_summary.get('sdk_catalog_version')}"
             ),
             f"- Notes: {'; '.join(note_list) if note_list else 'none'}",
             "",
