@@ -77,6 +77,14 @@ UnsupportedImpact = Literal[
 DiagnosticSeverity = Literal["info", "warning", "error"]
 DiagnosticStage = Literal["parse", "normalize", "eligibility", "handoff"]
 
+IsolationKind = Literal[
+    "unspecified",
+    "main_actor",
+    "actor",
+    "nonisolated",
+    "unknown",
+]
+
 
 @dataclass(frozen=True)
 class SourceSpan:
@@ -247,6 +255,7 @@ class VariableDeclPayload:
     names: tuple[str, ...]
     type_annotation: str | None
     initializer_expression_id: str | None
+    is_var: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -365,6 +374,20 @@ class FrontendSymbol:
     eligibility: FrontendEligibilityState
     children: tuple[FrontendSymbol, ...]
     body: FrontendBody | None
+    attributes: tuple[str, ...] = ()
+    isolation: IsolationKind = "unspecified"
+
+
+@dataclass(frozen=True)
+class SharedMutableCandidate:
+    """Type- or file-scoped `var` that may be shared across isolation domains (NS3)."""
+
+    name: str
+    parent_type: str | None
+    is_static: bool
+    location: SourceSpan
+    attributes: tuple[str, ...] = ()
+    isolation: IsolationKind = "unspecified"
 
 
 @dataclass(frozen=True)
@@ -418,6 +441,7 @@ class FrontendUnit:
     diagnostics: tuple[FrontendDiagnostic, ...]
     unsupported_constructs: tuple[UnsupportedConstructRecord, ...]
     symbols_by_id: Mapping[str, FrontendSymbol] = field(repr=False)
+    shared_mutables: tuple[SharedMutableCandidate, ...] = ()
 
 
 def flatten_statements(

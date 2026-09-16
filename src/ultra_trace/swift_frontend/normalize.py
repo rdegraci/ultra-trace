@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, Mapping
 
 from ultra_trace.frontend.call_index import build_call_site_index
@@ -15,6 +16,7 @@ from ultra_trace.frontend.ids import (
     symbol_id,
     unsupported_id,
 )
+from ultra_trace.frontend.isolation import isolation_from_attributes
 from ultra_trace.frontend.models import (
     AssignmentPayload,
     BinaryOperatorPayload,
@@ -44,6 +46,7 @@ from ultra_trace.frontend.models import (
     ParserMetadata,
     ResolutionStatus,
     ReturnPayload,
+    SharedMutableCandidate,
     SourceSpan,
     StatementKind,
     StatementPayload,
@@ -182,6 +185,11 @@ def normalize_helper_output(payload: Mapping[str, Any]) -> FrontendUnit:
         diagnostics=tuple(all_diags),
         unsupported_constructs=tuple(all_uns),
         symbols_by_id=symbols_by_id,
+        shared_mutables=tuple(
+            candidate
+            for raw, _, _, _, _ in built
+            for candidate in _shared_mutables_for_file(raw, str(raw.get("path", "")))
+        ),
     )
 
 
@@ -273,6 +281,12 @@ def _build_file_symbols(
         loc = _span(path, type_raw)
         qname = name
         sid = symbol_id(path, kind, qname, loc)
+        attrs = _raw_attributes(type_raw)
+        isolation = isolation_from_attributes(
+            attrs,
+            nonisolated=_raw_nonisolated(type_raw),
+            symbol_kind=kind,
+        )
         type_symbols.append(
             FrontendSymbol(
                 symbol_id=sid,
@@ -290,6 +304,8 @@ def _build_file_symbols(
                 ),
                 children=(),
                 body=None,
+                attributes=attrs,
+                isolation=isolation,
             )
         )
 
@@ -305,30 +321,26 @@ def _build_file_symbols(
     for fn_sym, fn in zip(func_symbols, functions):
         parent = _parent_type_symbol(fn, fn_sym, type_symbols)
         if parent is not None:
-            updated = FrontendSymbol(
-                symbol_id=fn_sym.symbol_id,
-                name=fn_sym.name,
-                kind=fn_sym.kind,
+            isolation = isolation_from_attributes(
+                fn_sym.attributes,
+                nonisolated=_raw_nonisolated(fn),
+                parent_is_actor=parent.kind == "actor",
+            )
+            if parent.isolation == "main_actor" and isolation == "unspecified":
+                isolation = "main_actor"
+            updated = replace(
+                fn_sym,
                 parent_symbol_id=parent.symbol_id,
                 qualified_name=f"{parent.qualified_name}.{fn_sym.name}",
-                location=fn_sym.location,
-                eligibility=fn_sym.eligibility,
-                children=fn_sym.children,
-                body=fn_sym.body,
+                isolation=isolation,
             )
             # Rebuild symbol_id after qualified_name change for stability with qname.
             new_id = symbol_id(
                 path, updated.kind, updated.qualified_name, updated.location
             )
-            updated = FrontendSymbol(
+            updated = replace(
+                updated,
                 symbol_id=new_id,
-                name=updated.name,
-                kind=updated.kind,
-                parent_symbol_id=updated.parent_symbol_id,
-                qualified_name=updated.qualified_name,
-                location=updated.location,
-                eligibility=updated.eligibility,
-                children=updated.children,
                 body=_rebind_body_id(updated.body, new_id),
             )
             children[parent.symbol_id].append(updated)
@@ -346,19 +358,7 @@ def _build_file_symbols(
                 ),
             )
         )
-        rebuilt_types.append(
-            FrontendSymbol(
-                symbol_id=type_sym.symbol_id,
-                name=type_sym.name,
-                kind=type_sym.kind,
-                parent_symbol_id=type_sym.parent_symbol_id,
-                qualified_name=type_sym.qualified_name,
-                location=type_sym.location,
-                eligibility=type_sym.eligibility,
-                children=kids,
-                body=type_sym.body,
-            )
-        )
+        rebuilt_types.append(replace(type_sym, children=kids))
 
     top_funcs = [f for f in func_symbols if f.symbol_id not in nested_ids]
     # Recompute nested by matching rebuilt children names/locations instead of old ids
@@ -501,6 +501,12 @@ def _function_symbol(
         ),
         children=(),
         body=body,
+        attributes=_raw_attributes(fn),
+        isolation=isolation_from_attributes(
+            _raw_attributes(fn),
+            nonisolated=_raw_nonisolated(fn),
+            symbol_kind=kind,
+        ),
     )
 
 
@@ -576,6 +582,11 @@ def _statement_payload(
                 str(raw["type_annotation"]) if raw.get("type_annotation") else None
             ),
             initializer_expression_id=init_id,
+            is_var=(
+                bool(raw["is_var"])
+                if "is_var" in raw
+                else None
+            ),
         )
     if kind == "assignment":
         target = raw.get("target")
@@ -978,17 +989,7 @@ def _apply_resolution(
             unsupported_constructs=body.unsupported_constructs,
             expressions=tuple(new_exprs),
         )
-    return FrontendSymbol(
-        symbol_id=symbol.symbol_id,
-        name=symbol.name,
-        kind=symbol.kind,
-        parent_symbol_id=symbol.parent_symbol_id,
-        qualified_name=symbol.qualified_name,
-        location=symbol.location,
-        eligibility=symbol.eligibility,
-        children=children,
-        body=body,
-    )
+    return replace(symbol, children=children, body=body)
 
 
 def _file_unsupported(
@@ -1095,17 +1096,68 @@ def _with_eligibility(
             unsupported_constructs=tuple(mine),
             expressions=body.expressions,
         )
-    return FrontendSymbol(
-        symbol_id=symbol.symbol_id,
-        name=symbol.name,
-        kind=symbol.kind,
-        parent_symbol_id=symbol.parent_symbol_id,
-        qualified_name=symbol.qualified_name,
-        location=symbol.location,
-        eligibility=elig,
-        children=children,
-        body=body,
-    )
+    return replace(symbol, eligibility=elig, children=children, body=body)
+
+
+def _raw_attributes(raw: Mapping[str, Any]) -> tuple[str, ...]:
+    attrs = raw.get("attributes") or ()
+    if not isinstance(attrs, (list, tuple)):
+        return ()
+    return tuple(str(a) for a in attrs if a is not None and str(a).strip())
+
+
+def _raw_nonisolated(raw: Mapping[str, Any]) -> bool:
+    return bool(raw.get("nonisolated"))
+
+
+def _shared_mutables_for_file(
+    raw: Mapping[str, Any], path: str
+) -> tuple[SharedMutableCandidate, ...]:
+    out: list[SharedMutableCandidate] = []
+    parent_kinds = {
+        str(t.get("name", "")): str(t.get("kind", ""))
+        for t in raw.get("types", [])
+        if isinstance(t, Mapping)
+    }
+    parent_attrs = {
+        str(t.get("name", "")): _raw_attributes(t)
+        for t in raw.get("types", [])
+        if isinstance(t, Mapping)
+    }
+    for item in raw.get("shared_mutables", []):
+        if not isinstance(item, Mapping):
+            continue
+        name = str(item.get("name", ""))
+        if not name:
+            continue
+        parent = item.get("parent_type")
+        parent_type = str(parent) if parent not in (None, "") else None
+        attrs = _raw_attributes(item)
+        parent_is_actor = parent_kinds.get(parent_type or "") == "actor"
+        # Inherit MainActor from declaring type attributes when unmarked.
+        inherited = parent_attrs.get(parent_type or "", ())
+        isolation = isolation_from_attributes(
+            attrs or inherited,
+            nonisolated=_raw_nonisolated(item),
+            parent_is_actor=parent_is_actor,
+        )
+        if isolation == "unspecified":
+            isolation = isolation_from_attributes(
+                inherited,
+                nonisolated=False,
+                parent_is_actor=parent_is_actor,
+            )
+        out.append(
+            SharedMutableCandidate(
+                name=name,
+                parent_type=parent_type,
+                is_static=bool(item.get("is_static", False)),
+                location=_span(path, item),
+                attributes=attrs,
+                isolation=isolation,
+            )
+        )
+    return tuple(out)
 
 
 def _diagnostic(

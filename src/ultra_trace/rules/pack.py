@@ -14,11 +14,13 @@ from ultra_trace.rules.ids import (
     PYTHON_CORE_RULE_IDS,
 )
 from ultra_trace.rules.integer_overflow import IntegerOverflowRiskRule
+from ultra_trace.rules.main_actor_misuse import MainActorMisuseSignalRule
 from ultra_trace.rules.none_attribute import NoneAttributeRiskRule
 from ultra_trace.rules.optional_misuse import OptionalMisuseRiskRule
 from ultra_trace.rules.python_dead_branch import PythonDeadBranchCandidateRule
 from ultra_trace.rules.python_taint import PythonShallowTaintFlowRule
 from ultra_trace.rules.shallow_taint import ShallowTaintFlowRule
+from ultra_trace.rules.shared_mutable import SharedMutableCrossIsolationSignalRule
 from ultra_trace.rules.try_bang import TryBangRiskRule
 from ultra_trace.taint.catalog import TaintCatalog
 
@@ -57,6 +59,8 @@ def advanced_rules(catalog: TaintCatalog | None = None) -> tuple[Rule, ...]:
         IntegerOverflowRiskRule(),
         OptionalMisuseRiskRule(),
         DeepTaintFlowRule(taint),
+        MainActorMisuseSignalRule(),
+        SharedMutableCrossIsolationSignalRule(),
     )
 
 

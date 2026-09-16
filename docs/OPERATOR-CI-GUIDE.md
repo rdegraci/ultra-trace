@@ -17,6 +17,10 @@ Keep analyze boring and offline:
 
 Do not change these defaults for nightly jobs. Assist belongs in explore, not in the gate.
 
+Concurrency findings (`bug_type: concurrency`, advanced pack) are **heuristic isolation
+signals**. They must not be described as proven data races in CI summaries or Assist
+copy. Enable them with `rulePacks: [core, advanced]`.
+
 Sample config: [`examples/ultra-trace.yml`](../examples/ultra-trace.yml).
 
 ## Prerequisites (Swift)

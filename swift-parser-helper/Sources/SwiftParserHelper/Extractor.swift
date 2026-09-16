@@ -25,8 +25,10 @@ final class SpikeExtractor: SyntaxVisitor {
     private(set) var markers: [[String: Any]] = []
     private(set) var calls: [[String: Any]] = []
     private(set) var unsupported: [[String: Any]] = []
+    private(set) var sharedMutables: [[String: Any]] = []
 
     private var typeStack: [String] = []
+    private var functionDepth = 0
 
     init(converter: SourceLocationConverter) {
         self.converter = converter
@@ -44,10 +46,35 @@ final class SpikeExtractor: SyntaxVisitor {
         )
     }
 
-    private func recordType(kind: String, name: String, node: some SyntaxProtocol) {
+    private func attributeNames(from attributes: AttributeListSyntax) -> [String] {
+        var names: [String] = []
+        for element in attributes {
+            guard case let .attribute(attr) = element else { continue }
+            names.append(attr.attributeName.trimmedDescription)
+        }
+        return names
+    }
+
+    private func hasNonisolated(_ modifiers: DeclModifierListSyntax) -> Bool {
+        modifiers.contains { $0.name.text == "nonisolated" }
+    }
+
+    private func hasStatic(_ modifiers: DeclModifierListSyntax) -> Bool {
+        modifiers.contains { $0.name.text == "static" }
+    }
+
+    private func recordType(
+        kind: String,
+        name: String,
+        node: some SyntaxProtocol,
+        attributes: AttributeListSyntax,
+        modifiers: DeclModifierListSyntax
+    ) {
         var item = span(of: node).asDict()
         item["kind"] = kind
         item["name"] = name
+        item["attributes"] = attributeNames(from: attributes)
+        item["nonisolated"] = hasNonisolated(modifiers)
         types.append(item)
     }
 
@@ -57,12 +84,16 @@ final class SpikeExtractor: SyntaxVisitor {
         node: some SyntaxProtocol,
         body: CodeBlockSyntax?,
         parameters: [[String: Any]] = [],
-        returnAnnotation: String? = nil
+        returnAnnotation: String? = nil,
+        attributes: AttributeListSyntax = AttributeListSyntax([]),
+        modifiers: DeclModifierListSyntax = DeclModifierListSyntax([])
     ) {
         var item = span(of: node).asDict()
         item["kind"] = kind
         item["name"] = name
         item["parameters"] = parameters
+        item["attributes"] = attributeNames(from: attributes)
+        item["nonisolated"] = hasNonisolated(modifiers)
         if let returnAnnotation {
             item["return_annotation"] = returnAnnotation
         } else {
@@ -90,6 +121,25 @@ final class SpikeExtractor: SyntaxVisitor {
         functions.append(item)
     }
 
+    private func recordSharedMutable(
+        name: String,
+        node: some SyntaxProtocol,
+        attributes: AttributeListSyntax,
+        modifiers: DeclModifierListSyntax
+    ) {
+        var item = span(of: node).asDict()
+        item["name"] = name
+        item["is_static"] = hasStatic(modifiers)
+        item["attributes"] = attributeNames(from: attributes)
+        item["nonisolated"] = hasNonisolated(modifiers)
+        if let parent = typeStack.last {
+            item["parent_type"] = parent
+        } else {
+            item["parent_type"] = NSNull()
+        }
+        sharedMutables.append(item)
+    }
+
     private func recordMarker(kind: String, node: some SyntaxProtocol, detail: String? = nil) {
         var item = span(of: node).asDict()
         item["kind"] = kind
@@ -115,7 +165,13 @@ final class SpikeExtractor: SyntaxVisitor {
     // MARK: - Types
 
     override func visit(_ node: ClassDeclSyntax) -> SyntaxVisitorContinueKind {
-        recordType(kind: "class", name: node.name.text, node: node)
+        recordType(
+            kind: "class",
+            name: node.name.text,
+            node: node,
+            attributes: node.attributes,
+            modifiers: node.modifiers
+        )
         typeStack.append(node.name.text)
         return .visitChildren
     }
@@ -125,7 +181,13 @@ final class SpikeExtractor: SyntaxVisitor {
     }
 
     override func visit(_ node: StructDeclSyntax) -> SyntaxVisitorContinueKind {
-        recordType(kind: "struct", name: node.name.text, node: node)
+        recordType(
+            kind: "struct",
+            name: node.name.text,
+            node: node,
+            attributes: node.attributes,
+            modifiers: node.modifiers
+        )
         typeStack.append(node.name.text)
         return .visitChildren
     }
@@ -135,7 +197,13 @@ final class SpikeExtractor: SyntaxVisitor {
     }
 
     override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind {
-        recordType(kind: "enum", name: node.name.text, node: node)
+        recordType(
+            kind: "enum",
+            name: node.name.text,
+            node: node,
+            attributes: node.attributes,
+            modifiers: node.modifiers
+        )
         typeStack.append(node.name.text)
         return .visitChildren
     }
@@ -145,7 +213,13 @@ final class SpikeExtractor: SyntaxVisitor {
     }
 
     override func visit(_ node: ActorDeclSyntax) -> SyntaxVisitorContinueKind {
-        recordType(kind: "actor", name: node.name.text, node: node)
+        recordType(
+            kind: "actor",
+            name: node.name.text,
+            node: node,
+            attributes: node.attributes,
+            modifiers: node.modifiers
+        )
         typeStack.append(node.name.text)
         return .visitChildren
     }
@@ -155,7 +229,13 @@ final class SpikeExtractor: SyntaxVisitor {
     }
 
     override func visit(_ node: ProtocolDeclSyntax) -> SyntaxVisitorContinueKind {
-        recordType(kind: "protocol", name: node.name.text, node: node)
+        recordType(
+            kind: "protocol",
+            name: node.name.text,
+            node: node,
+            attributes: node.attributes,
+            modifiers: node.modifiers
+        )
         typeStack.append(node.name.text)
         return .visitChildren
     }
@@ -166,7 +246,13 @@ final class SpikeExtractor: SyntaxVisitor {
 
     override func visit(_ node: ExtensionDeclSyntax) -> SyntaxVisitorContinueKind {
         let name = node.extendedType.trimmedDescription
-        recordType(kind: "extension", name: name, node: node)
+        recordType(
+            kind: "extension",
+            name: name,
+            node: node,
+            attributes: node.attributes,
+            modifiers: node.modifiers
+        )
         typeStack.append(name)
         return .visitChildren
     }
@@ -175,9 +261,29 @@ final class SpikeExtractor: SyntaxVisitor {
         _ = typeStack.popLast()
     }
 
+    // MARK: - Shared mutable candidates (type / file scope vars)
+
+    override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
+        guard functionDepth == 0 else { return .visitChildren }
+        guard node.bindingSpecifier.text == "var" else { return .visitChildren }
+        for binding in node.bindings {
+            guard let pattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
+                continue
+            }
+            recordSharedMutable(
+                name: pattern.identifier.text,
+                node: node,
+                attributes: node.attributes,
+                modifiers: node.modifiers
+            )
+        }
+        return .visitChildren
+    }
+
     // MARK: - Functions
 
     override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
+        functionDepth += 1
         recordFunction(
             kind: "function",
             name: node.name.text,
@@ -187,12 +293,19 @@ final class SpikeExtractor: SyntaxVisitor {
                 node.signature.parameterClause,
                 converter: converter
             ),
-            returnAnnotation: node.signature.returnClause?.type.trimmedDescription
+            returnAnnotation: node.signature.returnClause?.type.trimmedDescription,
+            attributes: node.attributes,
+            modifiers: node.modifiers
         )
         return .visitChildren
     }
 
+    override func visitPost(_ node: FunctionDeclSyntax) {
+        functionDepth -= 1
+    }
+
     override func visit(_ node: InitializerDeclSyntax) -> SyntaxVisitorContinueKind {
+        functionDepth += 1
         recordFunction(
             kind: "initializer",
             name: "init",
@@ -202,20 +315,42 @@ final class SpikeExtractor: SyntaxVisitor {
                 node.signature.parameterClause,
                 converter: converter
             ),
-            returnAnnotation: nil
+            returnAnnotation: nil,
+            attributes: node.attributes,
+            modifiers: node.modifiers
         )
         return .visitChildren
     }
 
+    override func visitPost(_ node: InitializerDeclSyntax) {
+        functionDepth -= 1
+    }
+
     override func visit(_ node: DeinitializerDeclSyntax) -> SyntaxVisitorContinueKind {
+        functionDepth += 1
         recordFunction(kind: "function", name: "deinit", node: node, body: node.body)
         return .visitChildren
     }
 
+    override func visitPost(_ node: DeinitializerDeclSyntax) {
+        functionDepth -= 1
+    }
+
     override func visit(_ node: AccessorDeclSyntax) -> SyntaxVisitorContinueKind {
+        functionDepth += 1
         let name = node.accessorSpecifier.text
-        recordFunction(kind: "accessor", name: name, node: node, body: node.body)
+        recordFunction(
+            kind: "accessor",
+            name: name,
+            node: node,
+            body: node.body,
+            attributes: node.attributes
+        )
         return .visitChildren
+    }
+
+    override func visitPost(_ node: AccessorDeclSyntax) {
+        functionDepth -= 1
     }
 
     // MARK: - Markers / calls
@@ -349,6 +484,9 @@ enum FileExtractor {
         let unsupported = extractor.unsupported.sorted { lhs, rhs in
             compareSpan(lhs, rhs)
         }
+        let sharedMutables = extractor.sharedMutables.sorted { lhs, rhs in
+            compareSpan(lhs, rhs)
+        }
 
         return [
             "path": relativePath,
@@ -360,6 +498,7 @@ enum FileExtractor {
             "markers": markers,
             "calls": calls,
             "unsupported": unsupported,
+            "shared_mutables": sharedMutables,
             "diagnostics": [] as [Any],
         ]
     }

@@ -1,0 +1,95 @@
+[
+  {
+    "id": "swift.main_actor_misuse_signal:fixtures.swift.vertical.isolation_signals.swift:9:5",
+    "rule_id": "swift.main_actor_misuse_signal",
+    "title": "Possible MainActor isolation mismatch (heuristic)",
+    "severity": "medium",
+    "confidence": "medium",
+    "location": {
+      "file_path": "fixtures/swift/vertical/isolation_signals.swift",
+      "start_line": 9,
+      "start_column": 5,
+      "end_line": 9,
+      "end_column": 25
+    },
+    "symbol_name": "backgroundWork",
+    "bug_type": "concurrency",
+    "description": "`backgroundWork` may call MainActor-isolated `updateUI` from a different isolation domain. 4 nodes; 1 path(s); concurrency signal; caller isolation=nonisolated; callee `updateUI` isolation=main_actor. Not a proven data race.",
+    "risk": "UI or MainActor state may be touched off the main actor. Confirm with Swift concurrency tooling; this rule does not prove a race.",
+    "path_summary": "4 nodes; 1 path(s); concurrency signal; caller isolation=nonisolated; callee `updateUI` isolation=main_actor",
+    "proof": {
+      "tier": 3,
+      "kind": "path_witness",
+      "supported": true,
+      "trigger_condition": "Call `backgroundWork` so it reaches `updateUI` at fixtures/swift/vertical/isolation_signals.swift:9.",
+      "expected_behavior": "Heuristic MainActor isolation mismatch signal. Not a proven data race.",
+      "assumptions": [
+        "Attribute/parent-based isolation labels only; incomplete without SIL.",
+        "This is a CI concurrency signal, not a proven data race."
+      ],
+      "content": "1. Enter `backgroundWork` (isolation=nonisolated).\n2. Follow path: 4 nodes; 1 path(s); concurrency signal; caller isolation=nonisolated; callee `updateUI` isolation=main_actor\n3. Call `@MainActor` `updateUI`.\n4. Review isolation; do not treat this finding as a race proof.",
+      "language": "text"
+    },
+    "recommended_fix": "Hop to the main actor (`await MainActor.run` / `@MainActor`) or mark the callee `nonisolated` only when safe.",
+    "eligibility_context": {
+      "state": "cfg-ready",
+      "reason": "cfg-ready",
+      "can_build_cfg": true,
+      "unsupported_construct_count": 0,
+      "warning_count": 0
+    },
+    "unsupported_constructs": [],
+    "advisory": {
+      "llm_used": false,
+      "provider": null,
+      "content": []
+    }
+  },
+  {
+    "id": "swift.shared_mutable_cross_isolation_signal:fixtures.swift.vertical.isolation_signals.swift:14:5",
+    "rule_id": "swift.shared_mutable_cross_isolation_signal",
+    "title": "Shared mutable access across isolation domains (heuristic)",
+    "severity": "medium",
+    "confidence": "medium",
+    "location": {
+      "file_path": "fixtures/swift/vertical/isolation_signals.swift",
+      "start_line": 14,
+      "start_column": 5,
+      "end_line": 14,
+      "end_column": 27
+    },
+    "symbol_name": "CounterBox.bump",
+    "bug_type": "concurrency",
+    "description": "Shared mutable `title` appears accessed from isolation domains ['actor', 'main_actor', 'unspecified'] via [CounterBox.bump, Screen.setTitle, touchShared]. shared `title` isolation domains=['actor', 'main_actor', 'unspecified']; accessors=[CounterBox.bump, Screen.setTitle, touchShared]; concurrency signal. Not a proven data race.",
+    "risk": "Cross-isolation mutable sharing can race under concurrency. Confirm with Swift concurrency tooling; this rule does not prove a race.",
+    "path_summary": "shared `title` isolation domains=['actor', 'main_actor', 'unspecified']; accessors=[CounterBox.bump, Screen.setTitle, touchShared]; concurrency signal",
+    "proof": {
+      "tier": 3,
+      "kind": "path_witness",
+      "supported": true,
+      "trigger_condition": "Exercise `CounterBox.bump, Screen.setTitle, touchShared` so they read or write shared `title` at fixtures/swift/vertical/isolation_signals.swift:14.",
+      "expected_behavior": "Heuristic shared-mutable cross-isolation signal. Not a proven data race.",
+      "assumptions": [
+        "Shared-mutable inventory from type/file-scoped `var` only.",
+        "Name-based access matching; no happens-before / lock model.",
+        "This is a CI concurrency signal, not a proven data race."
+      ],
+      "content": "1. Note shared mutable `title` (parent=Screen).\n2. Observe accessors with domains ['actor', 'main_actor', 'unspecified']: CounterBox.bump, Screen.setTitle, touchShared\n3. Review isolation; do not treat this finding as a race proof.",
+      "language": "text"
+    },
+    "recommended_fix": "Keep the mutable state inside an actor, protect it with a lock, or confine access to one isolation domain.",
+    "eligibility_context": {
+      "state": "cfg-ready",
+      "reason": "cfg-ready",
+      "can_build_cfg": true,
+      "unsupported_construct_count": 0,
+      "warning_count": 0
+    },
+    "unsupported_constructs": [],
+    "advisory": {
+      "llm_used": false,
+      "provider": null,
+      "content": []
+    }
+  }
+]
