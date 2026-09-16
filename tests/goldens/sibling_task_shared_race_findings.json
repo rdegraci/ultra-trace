@@ -1,0 +1,50 @@
+[
+  {
+    "id": "swift.sibling_task_unprotected_shared_race:fixtures.swift.vertical.sibling_task_shared_race.swift:3:1",
+    "rule_id": "swift.sibling_task_unprotected_shared_race",
+    "title": "Unprotected concurrent access across sibling Tasks",
+    "severity": "medium",
+    "confidence": "medium",
+    "location": {
+      "file_path": "fixtures/swift/vertical/sibling_task_shared_race.swift",
+      "start_line": 3,
+      "start_column": 1,
+      "end_line": 3,
+      "end_column": 16
+    },
+    "symbol_name": "spawnRace",
+    "bug_type": "concurrency",
+    "description": "Shared `counter` is written/accessed from sibling Task timelines without a modeled sync edge. dual_timeline; shared=`counter`; timeline_a=Task@14\u2192write@15; timeline_b=Task@17\u2192write@18; sync_gap=no await/join between sibling Tasks",
+    "risk": "Concurrent mutation of shared state can race. Confirm with Swift concurrency tooling; this finding is a dual-timeline witness for one narrow pattern, not a global race proof.",
+    "path_summary": "dual_timeline; shared=`counter`; timeline_a=Task@14\u2192write@15; timeline_b=Task@17\u2192write@18; sync_gap=no await/join between sibling Tasks",
+    "proof": {
+      "tier": 3,
+      "kind": "dual_timeline_witness",
+      "supported": true,
+      "trigger_condition": "Call `spawnRace` so sibling Tasks touch shared `counter` without a join.",
+      "expected_behavior": "Dual-timeline witness for unprotected concurrent access. Pattern-scoped; not a global race proof.",
+      "assumptions": [
+        "Sibling Task / Task.detached hops only; TaskGroup and actor hops excluded.",
+        "No lock/GCD/queue happens-before model.",
+        "Await after the last Task hop suppresses this witness (conservative join).",
+        "Does not claim races outside this narrow pattern."
+      ],
+      "content": "Timeline A (`task:expr:fixtures/swift/vertical/sibling_task_shared_race.swift:call:14:5:5`):\n  - Task hop at L14\n  - call `bumpA` writes `counter` at L15\nTimeline B (`task:expr:fixtures/swift/vertical/sibling_task_shared_race.swift:call:17:5:10`):\n  - Task hop at L17\n  - call `bumpB` writes `counter` at L18\nSync gap: no await/join between sibling Tasks\nThis is a pattern-scoped dual-timeline race witness for sibling Tasks only. It does not prove global race freedom.",
+      "language": "text"
+    },
+    "recommended_fix": "Isolate the mutable state in an actor, protect it with synchronization, or await/join Tasks before overlapping access.",
+    "eligibility_context": {
+      "state": "cfg-ready",
+      "reason": "cfg-ready",
+      "can_build_cfg": true,
+      "unsupported_construct_count": 0,
+      "warning_count": 0
+    },
+    "unsupported_constructs": [],
+    "advisory": {
+      "llm_used": false,
+      "provider": null,
+      "content": []
+    }
+  }
+]

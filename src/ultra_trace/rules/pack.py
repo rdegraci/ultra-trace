@@ -21,6 +21,7 @@ from ultra_trace.rules.python_dead_branch import PythonDeadBranchCandidateRule
 from ultra_trace.rules.python_taint import PythonShallowTaintFlowRule
 from ultra_trace.rules.shallow_taint import ShallowTaintFlowRule
 from ultra_trace.rules.shared_mutable import SharedMutableCrossIsolationSignalRule
+from ultra_trace.rules.sibling_task_race import SiblingTaskUnprotectedSharedRaceRule
 from ultra_trace.rules.try_bang import TryBangRiskRule
 from ultra_trace.taint.catalog import TaintCatalog
 
@@ -61,6 +62,7 @@ def advanced_rules(catalog: TaintCatalog | None = None) -> tuple[Rule, ...]:
         DeepTaintFlowRule(taint),
         MainActorMisuseSignalRule(),
         SharedMutableCrossIsolationSignalRule(),
+        SiblingTaskUnprotectedSharedRaceRule(),
     )
 
 

@@ -18,6 +18,7 @@ ADVANCED_RULE_IDS: tuple[str, ...] = (
     "swift.deep_taint_flow",
     "swift.main_actor_misuse_signal",
     "swift.shared_mutable_cross_isolation_signal",
+    "swift.sibling_task_unprotected_shared_race",
 )
 
 PYTHON_CORE_RULE_IDS: tuple[str, ...] = (

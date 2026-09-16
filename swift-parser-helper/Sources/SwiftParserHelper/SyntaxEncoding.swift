@@ -391,6 +391,22 @@ enum SyntaxEncoding {
         if let node = expr.as(ClosureExprSyntax.self) {
             var item = span(of: node, converter: converter)
             item["kind"] = "closure_expression"
+            var elements: [[String: Any]] = []
+            for codeItem in node.statements {
+                switch codeItem.item {
+                case .expr(let inner):
+                    elements.append(encodeExpr(inner, converter: converter))
+                case .stmt(let stmt):
+                    if let exprStmt = stmt.as(ExpressionStmtSyntax.self) {
+                        elements.append(
+                            encodeExpr(exprStmt.expression, converter: converter)
+                        )
+                    }
+                default:
+                    break
+                }
+            }
+            item["elements"] = elements
             return item
         }
         if let node = expr.as(InfixOperatorExprSyntax.self) {
@@ -451,7 +467,14 @@ enum SyntaxEncoding {
         item["kind"] = "call"
         item["callee"] = encodeExpr(node.calledExpression, converter: converter)
         item["callee_text"] = node.calledExpression.trimmedDescription
-        item["arguments"] = node.arguments.map { encodeExpr($0.expression, converter: converter) }
+        var args = node.arguments.map { encodeExpr($0.expression, converter: converter) }
+        if let trailing = node.trailingClosure {
+            args.append(encodeExpr(ExprSyntax(trailing), converter: converter))
+        }
+        for additional in node.additionalTrailingClosures {
+            args.append(encodeExpr(ExprSyntax(additional.closure), converter: converter))
+        }
+        item["arguments"] = args
         item["is_try"] = tryFlags.isTry
         item["is_try_optional"] = tryFlags.isOpt
         item["is_try_force"] = tryFlags.isForce

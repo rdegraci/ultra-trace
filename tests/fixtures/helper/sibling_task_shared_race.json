@@ -1,0 +1,596 @@
+{
+  "diagnostics": [],
+  "errors": [],
+  "files": [
+    {
+      "calls": [
+        {
+          "callee": "Task",
+          "end_column": 6,
+          "end_line": 16,
+          "start_column": 5,
+          "start_line": 14
+        },
+        {
+          "callee": "bumpA",
+          "end_column": 16,
+          "end_line": 15,
+          "start_column": 9,
+          "start_line": 15
+        },
+        {
+          "callee": "Task",
+          "end_column": 6,
+          "end_line": 19,
+          "start_column": 5,
+          "start_line": 17
+        },
+        {
+          "callee": "bumpB",
+          "end_column": 16,
+          "end_line": 18,
+          "start_column": 9,
+          "start_line": 18
+        },
+        {
+          "callee": "Task",
+          "end_column": 6,
+          "end_line": 25,
+          "start_column": 5,
+          "start_line": 23
+        },
+        {
+          "callee": "bumpA",
+          "end_column": 16,
+          "end_line": 24,
+          "start_column": 9,
+          "start_line": 24
+        },
+        {
+          "callee": "Task",
+          "end_column": 6,
+          "end_line": 28,
+          "start_column": 5,
+          "start_line": 26
+        },
+        {
+          "callee": "bumpB",
+          "end_column": 16,
+          "end_line": 27,
+          "start_column": 9,
+          "start_line": 27
+        },
+        {
+          "callee": "bumpB",
+          "end_column": 22,
+          "end_line": 29,
+          "start_column": 15,
+          "start_line": 29
+        },
+        {
+          "callee": "Task",
+          "end_column": 6,
+          "end_line": 35,
+          "start_column": 5,
+          "start_line": 33
+        },
+        {
+          "callee": "bumpA",
+          "end_column": 16,
+          "end_line": 34,
+          "start_column": 9,
+          "start_line": 34
+        }
+      ],
+      "diagnostics": [],
+      "functions": [
+        {
+          "attributes": [],
+          "body_end_column": 2,
+          "body_end_line": 7,
+          "body_start_column": 14,
+          "body_start_line": 5,
+          "end_column": 2,
+          "end_line": 7,
+          "kind": "function",
+          "name": "bumpA",
+          "nonisolated": false,
+          "parameters": [],
+          "parent_type": null,
+          "return_annotation": null,
+          "start_column": 1,
+          "start_line": 5,
+          "statements": [
+            {
+              "end_column": 16,
+              "end_line": 6,
+              "kind": "assignment",
+              "start_column": 5,
+              "start_line": 6,
+              "target": {
+                "end_column": 12,
+                "end_line": 6,
+                "kind": "identifier",
+                "name": "counter",
+                "start_column": 5,
+                "start_line": 6
+              },
+              "value": {
+                "end_column": 16,
+                "end_line": 6,
+                "kind": "literal",
+                "start_column": 15,
+                "start_line": 6,
+                "text": "1"
+              }
+            }
+          ]
+        },
+        {
+          "attributes": [],
+          "body_end_column": 2,
+          "body_end_line": 11,
+          "body_start_column": 14,
+          "body_start_line": 9,
+          "end_column": 2,
+          "end_line": 11,
+          "kind": "function",
+          "name": "bumpB",
+          "nonisolated": false,
+          "parameters": [],
+          "parent_type": null,
+          "return_annotation": null,
+          "start_column": 1,
+          "start_line": 9,
+          "statements": [
+            {
+              "end_column": 16,
+              "end_line": 10,
+              "kind": "assignment",
+              "start_column": 5,
+              "start_line": 10,
+              "target": {
+                "end_column": 12,
+                "end_line": 10,
+                "kind": "identifier",
+                "name": "counter",
+                "start_column": 5,
+                "start_line": 10
+              },
+              "value": {
+                "end_column": 16,
+                "end_line": 10,
+                "kind": "literal",
+                "start_column": 15,
+                "start_line": 10,
+                "text": "2"
+              }
+            }
+          ]
+        },
+        {
+          "attributes": [],
+          "body_end_column": 2,
+          "body_end_line": 20,
+          "body_start_column": 18,
+          "body_start_line": 13,
+          "end_column": 2,
+          "end_line": 20,
+          "kind": "function",
+          "name": "spawnRace",
+          "nonisolated": false,
+          "parameters": [],
+          "parent_type": null,
+          "return_annotation": null,
+          "start_column": 1,
+          "start_line": 13,
+          "statements": [
+            {
+              "end_column": 6,
+              "end_line": 16,
+              "expression": {
+                "arguments": [
+                  {
+                    "elements": [
+                      {
+                        "arguments": [],
+                        "callee": {
+                          "end_column": 14,
+                          "end_line": 15,
+                          "kind": "identifier",
+                          "name": "bumpA",
+                          "start_column": 9,
+                          "start_line": 15
+                        },
+                        "callee_text": "bumpA",
+                        "end_column": 16,
+                        "end_line": 15,
+                        "is_try": false,
+                        "is_try_force": false,
+                        "is_try_optional": false,
+                        "kind": "call",
+                        "start_column": 9,
+                        "start_line": 15
+                      }
+                    ],
+                    "end_column": 6,
+                    "end_line": 16,
+                    "kind": "closure_expression",
+                    "start_column": 10,
+                    "start_line": 14
+                  }
+                ],
+                "callee": {
+                  "end_column": 9,
+                  "end_line": 14,
+                  "kind": "identifier",
+                  "name": "Task",
+                  "start_column": 5,
+                  "start_line": 14
+                },
+                "callee_text": "Task",
+                "end_column": 6,
+                "end_line": 16,
+                "is_try": false,
+                "is_try_force": false,
+                "is_try_optional": false,
+                "kind": "call",
+                "start_column": 5,
+                "start_line": 14
+              },
+              "kind": "expression",
+              "start_column": 5,
+              "start_line": 14
+            },
+            {
+              "end_column": 6,
+              "end_line": 19,
+              "expression": {
+                "arguments": [
+                  {
+                    "elements": [
+                      {
+                        "arguments": [],
+                        "callee": {
+                          "end_column": 14,
+                          "end_line": 18,
+                          "kind": "identifier",
+                          "name": "bumpB",
+                          "start_column": 9,
+                          "start_line": 18
+                        },
+                        "callee_text": "bumpB",
+                        "end_column": 16,
+                        "end_line": 18,
+                        "is_try": false,
+                        "is_try_force": false,
+                        "is_try_optional": false,
+                        "kind": "call",
+                        "start_column": 9,
+                        "start_line": 18
+                      }
+                    ],
+                    "end_column": 6,
+                    "end_line": 19,
+                    "kind": "closure_expression",
+                    "start_column": 10,
+                    "start_line": 17
+                  }
+                ],
+                "callee": {
+                  "end_column": 9,
+                  "end_line": 17,
+                  "kind": "identifier",
+                  "name": "Task",
+                  "start_column": 5,
+                  "start_line": 17
+                },
+                "callee_text": "Task",
+                "end_column": 6,
+                "end_line": 19,
+                "is_try": false,
+                "is_try_force": false,
+                "is_try_optional": false,
+                "kind": "call",
+                "start_column": 5,
+                "start_line": 17
+              },
+              "kind": "expression",
+              "start_column": 5,
+              "start_line": 17
+            }
+          ]
+        },
+        {
+          "attributes": [],
+          "body_end_column": 2,
+          "body_end_line": 30,
+          "body_start_column": 29,
+          "body_start_line": 22,
+          "end_column": 2,
+          "end_line": 30,
+          "kind": "function",
+          "name": "spawnThenAwait",
+          "nonisolated": false,
+          "parameters": [],
+          "parent_type": null,
+          "return_annotation": null,
+          "start_column": 1,
+          "start_line": 22,
+          "statements": [
+            {
+              "end_column": 6,
+              "end_line": 25,
+              "expression": {
+                "arguments": [
+                  {
+                    "elements": [
+                      {
+                        "arguments": [],
+                        "callee": {
+                          "end_column": 14,
+                          "end_line": 24,
+                          "kind": "identifier",
+                          "name": "bumpA",
+                          "start_column": 9,
+                          "start_line": 24
+                        },
+                        "callee_text": "bumpA",
+                        "end_column": 16,
+                        "end_line": 24,
+                        "is_try": false,
+                        "is_try_force": false,
+                        "is_try_optional": false,
+                        "kind": "call",
+                        "start_column": 9,
+                        "start_line": 24
+                      }
+                    ],
+                    "end_column": 6,
+                    "end_line": 25,
+                    "kind": "closure_expression",
+                    "start_column": 10,
+                    "start_line": 23
+                  }
+                ],
+                "callee": {
+                  "end_column": 9,
+                  "end_line": 23,
+                  "kind": "identifier",
+                  "name": "Task",
+                  "start_column": 5,
+                  "start_line": 23
+                },
+                "callee_text": "Task",
+                "end_column": 6,
+                "end_line": 25,
+                "is_try": false,
+                "is_try_force": false,
+                "is_try_optional": false,
+                "kind": "call",
+                "start_column": 5,
+                "start_line": 23
+              },
+              "kind": "expression",
+              "start_column": 5,
+              "start_line": 23
+            },
+            {
+              "end_column": 6,
+              "end_line": 28,
+              "expression": {
+                "arguments": [
+                  {
+                    "elements": [
+                      {
+                        "arguments": [],
+                        "callee": {
+                          "end_column": 14,
+                          "end_line": 27,
+                          "kind": "identifier",
+                          "name": "bumpB",
+                          "start_column": 9,
+                          "start_line": 27
+                        },
+                        "callee_text": "bumpB",
+                        "end_column": 16,
+                        "end_line": 27,
+                        "is_try": false,
+                        "is_try_force": false,
+                        "is_try_optional": false,
+                        "kind": "call",
+                        "start_column": 9,
+                        "start_line": 27
+                      }
+                    ],
+                    "end_column": 6,
+                    "end_line": 28,
+                    "kind": "closure_expression",
+                    "start_column": 10,
+                    "start_line": 26
+                  }
+                ],
+                "callee": {
+                  "end_column": 9,
+                  "end_line": 26,
+                  "kind": "identifier",
+                  "name": "Task",
+                  "start_column": 5,
+                  "start_line": 26
+                },
+                "callee_text": "Task",
+                "end_column": 6,
+                "end_line": 28,
+                "is_try": false,
+                "is_try_force": false,
+                "is_try_optional": false,
+                "kind": "call",
+                "start_column": 5,
+                "start_line": 26
+              },
+              "kind": "expression",
+              "start_column": 5,
+              "start_line": 26
+            },
+            {
+              "end_column": 22,
+              "end_line": 29,
+              "kind": "assignment",
+              "start_column": 5,
+              "start_line": 29,
+              "target": {
+                "end_column": 6,
+                "end_line": 29,
+                "kind": "unknown",
+                "start_column": 5,
+                "start_line": 29,
+                "text": "_"
+              },
+              "value": {
+                "end_column": 22,
+                "end_line": 29,
+                "kind": "await",
+                "operand": {
+                  "arguments": [],
+                  "callee": {
+                    "end_column": 20,
+                    "end_line": 29,
+                    "kind": "identifier",
+                    "name": "bumpB",
+                    "start_column": 15,
+                    "start_line": 29
+                  },
+                  "callee_text": "bumpB",
+                  "end_column": 22,
+                  "end_line": 29,
+                  "is_try": false,
+                  "is_try_force": false,
+                  "is_try_optional": false,
+                  "kind": "call",
+                  "start_column": 15,
+                  "start_line": 29
+                },
+                "start_column": 9,
+                "start_line": 29
+              }
+            }
+          ]
+        },
+        {
+          "attributes": [],
+          "body_end_column": 2,
+          "body_end_line": 36,
+          "body_start_column": 19,
+          "body_start_line": 32,
+          "end_column": 2,
+          "end_line": 36,
+          "kind": "function",
+          "name": "singleTask",
+          "nonisolated": false,
+          "parameters": [],
+          "parent_type": null,
+          "return_annotation": null,
+          "start_column": 1,
+          "start_line": 32,
+          "statements": [
+            {
+              "end_column": 6,
+              "end_line": 35,
+              "expression": {
+                "arguments": [
+                  {
+                    "elements": [
+                      {
+                        "arguments": [],
+                        "callee": {
+                          "end_column": 14,
+                          "end_line": 34,
+                          "kind": "identifier",
+                          "name": "bumpA",
+                          "start_column": 9,
+                          "start_line": 34
+                        },
+                        "callee_text": "bumpA",
+                        "end_column": 16,
+                        "end_line": 34,
+                        "is_try": false,
+                        "is_try_force": false,
+                        "is_try_optional": false,
+                        "kind": "call",
+                        "start_column": 9,
+                        "start_line": 34
+                      }
+                    ],
+                    "end_column": 6,
+                    "end_line": 35,
+                    "kind": "closure_expression",
+                    "start_column": 10,
+                    "start_line": 33
+                  }
+                ],
+                "callee": {
+                  "end_column": 9,
+                  "end_line": 33,
+                  "kind": "identifier",
+                  "name": "Task",
+                  "start_column": 5,
+                  "start_line": 33
+                },
+                "callee_text": "Task",
+                "end_column": 6,
+                "end_line": 35,
+                "is_try": false,
+                "is_try_force": false,
+                "is_try_optional": false,
+                "kind": "call",
+                "start_column": 5,
+                "start_line": 33
+              },
+              "kind": "expression",
+              "start_column": 5,
+              "start_line": 33
+            }
+          ]
+        }
+      ],
+      "line_count": 37,
+      "markers": [
+        {
+          "end_column": 22,
+          "end_line": 29,
+          "kind": "await",
+          "start_column": 9,
+          "start_line": 29
+        }
+      ],
+      "parse_ok": true,
+      "path": "fixtures/swift/vertical/sibling_task_shared_race.swift",
+      "shared_mutables": [
+        {
+          "attributes": [],
+          "end_column": 16,
+          "end_line": 3,
+          "is_static": false,
+          "name": "counter",
+          "nonisolated": false,
+          "parent_type": null,
+          "start_column": 1,
+          "start_line": 3
+        }
+      ],
+      "types": [],
+      "unsupported": []
+    }
+  ],
+  "helper_version": "0.1.0",
+  "parser_metadata": {
+    "invocation_mode": "subprocess-json",
+    "parser_name": "swift-parser-helper",
+    "parser_version": "0.1.0",
+    "supports_recovery": false,
+    "swift_syntax_version": "602.0.0",
+    "toolchain_name": "Apple Swift",
+    "toolchain_version": "swift-driver version: 1.127.14.1 Apple Swift version 6.2.3 (swiftlang-6.2.3.3.21 clang-1700.6.3.2)"
+  },
+  "schema_version": "1.0"
+}
