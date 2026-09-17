@@ -152,10 +152,14 @@ def test_serve_api_findings_and_detail(tmp_path: Path) -> None:
     assert findings.status_code == 200
     rows = findings.json()["findings"]
     assert rows[0]["alias"] == "F1"
+    assert rows[0]["bug_type"] == "crash"
 
     detail = client.get("/api/findings/F1")
     assert detail.status_code == 200
-    assert detail.json()["path_summary"]
+    body = detail.json()
+    assert body["path_summary"]
+    assert body["bug_type"] == "crash"
+    assert body["witness_note"] is None
 
 
 def test_serve_ask_why_authority(tmp_path: Path) -> None:

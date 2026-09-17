@@ -676,7 +676,7 @@ def serve_cmd(
     no_open: bool = typer.Option(False, "--no-open", help="Do not open a browser"),
 ) -> None:
     """Local Bootstrap UI over a warm explore session (127.0.0.1 only)."""
-    from ultra_trace.repl.session import warm_repl_session
+    from ultra_trace.repl.session import ASSIST_BANNER, warm_repl_session
     from ultra_trace.serve.app import run_uvicorn
 
     formats, modes, lang = _validate_scan_options(
@@ -710,6 +710,10 @@ def serve_cmd(
     _enforce_advanced_availability(
         cfg, fail_on_advanced_unavailable=fail_on_advanced_unavailable
     )
+    typer.echo(
+        f"Warming analysis for {repo_root} "
+        f"(packs={','.join(cfg.rule_packs)}; this can take a while)…"
+    )
     try:
         session = warm_repl_session(
             repo_root=repo_root,
@@ -734,8 +738,10 @@ def serve_cmd(
         raise typer.Exit(code=EXIT_INTERNAL) from exc
 
     typer.echo(
-        "Assist mode: LLM advisory only. Analyzer owns findings, severity, and proofs."
+        f"Warmed {session.result.files_discovered} file(s); "
+        f"{len(session.result.findings)} finding(s)."
     )
+    typer.echo(ASSIST_BANNER)
     try:
         run_uvicorn(
             session,

@@ -263,10 +263,12 @@ def load_layered_config(
 
 
 def apply_explore_profile(cfg: UltraTraceConfig) -> UltraTraceConfig:
-    """Assist defaults for ``ultra-trace explore`` (human-first tracing).
+    """Assist defaults for ``explore`` / ``repl`` / ``serve`` (ultra assist).
 
-    Does not replace an explicit non-offline privacy mode or an already-enabled
-    call-summary config. CLI overrides still apply afterward.
+    Turns on redacted privacy (unless already non-offline), LLM features, bounded
+    call summaries, and the advanced rule pack (concurrency witnesses, overflow,
+    deep taint, …). Does not enable SIL ``analysisModes: advanced`` — that stays
+    opt-in. CLI overrides still apply afterward.
     """
     privacy = cfg.privacy_mode if cfg.privacy_mode != "offline" else "redacted"
     llm = replace(cfg.llm, enabled=True)
@@ -287,7 +289,14 @@ def apply_explore_profile(cfg: UltraTraceConfig) -> UltraTraceConfig:
         )
     )
     llm = replace(llm, allowed_features=features)
-    return replace(cfg, privacy_mode=privacy, llm=llm, call_summary=call)
+    packs = tuple(dict.fromkeys(("core", *cfg.rule_packs, "advanced")))
+    return replace(
+        cfg,
+        privacy_mode=privacy,
+        llm=llm,
+        call_summary=call,
+        rule_packs=packs,  # type: ignore[arg-type]
+    )
 
 
 def apply_cli_overrides(

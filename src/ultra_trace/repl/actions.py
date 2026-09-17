@@ -6,12 +6,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ultra_trace.frontend.models import SourceSpan
 from ultra_trace.llm.advisory import request_report_summary
 from ultra_trace.llm.candidates import is_llm_proposed
 from ultra_trace.llm.errors import LLMRequestError
-from ultra_trace.frontend.models import SourceSpan
 from ultra_trace.repl.llm_turns import ask_about_finding, ask_freeform_grounded
-from ultra_trace.repl.session import ASK_TURN_LIMIT, ReplSession
+from ultra_trace.repl.session import ASK_TURN_LIMIT, ASSIST_BANNER, ReplSession
 
 
 @dataclass(frozen=True)
@@ -36,6 +36,16 @@ def ide_uri_for(repo_root: Path, location: SourceSpan) -> str:
     )
 
 
+def _witness_note(bug_type: str, proof_kind: str) -> str | None:
+    """Honest framing for concurrency / dual-timeline findings."""
+    if bug_type == "concurrency" or "dual_timeline" in (proof_kind or ""):
+        return (
+            "Pattern witness only — not a claim of race-freedom for the whole "
+            "module or repo."
+        )
+    return None
+
+
 def _llm_off() -> ActionResult:
     return ActionResult(
         ok=False,
@@ -54,6 +64,7 @@ def list_findings(session: ReplSession) -> ActionResult:
                 "id": finding.id,
                 "severity": finding.severity,
                 "rule_id": finding.rule_id,
+                "bug_type": finding.bug_type,
                 "title": finding.title,
                 "symbol_name": finding.symbol_name,
                 "file": finding.location.file_path,
@@ -115,6 +126,7 @@ def show_finding(session: ReplSession, token: str) -> ActionResult:
         "alias": alias,
         "id": finding.id,
         "rule_id": finding.rule_id,
+        "bug_type": finding.bug_type,
         "severity": finding.severity,
         "confidence": finding.confidence,
         "symbol_name": finding.symbol_name,
@@ -130,12 +142,13 @@ def show_finding(session: ReplSession, token: str) -> ActionResult:
         "proof_supported": proof.supported,
         "proof_kind": proof.kind,
         "candidate": is_llm_proposed(finding),
+        "witness_note": _witness_note(finding.bug_type, proof.kind),
     }
     message = "\n".join(
         [
             f"{alias}  {finding.id}",
-            f"rule={finding.rule_id}  severity={finding.severity}  "
-            f"confidence={finding.confidence}",
+            f"rule={finding.rule_id}  bug_type={finding.bug_type}  "
+            f"severity={finding.severity}  confidence={finding.confidence}",
             f"symbol={finding.symbol_name or '-'}  "
             f"location={finding.location.file_path}:{finding.location.start_line}",
             f"ide_uri={data['ide_uri']}",
@@ -144,6 +157,11 @@ def show_finding(session: ReplSession, token: str) -> ActionResult:
             f"path_summary={finding.path_summary}",
             f"proof_tier={proof.tier} supported={proof.supported} kind={proof.kind}",
             f"recommended_fix={finding.recommended_fix}",
+            *(
+                [f"note={data['witness_note']}"]
+                if data["witness_note"]
+                else []
+            ),
         ]
     )
     return ActionResult(ok=True, kind="show", message=message, data=data)
@@ -486,9 +504,7 @@ def ask_question(session: ReplSession, question: str) -> ActionResult:
 
 
 def session_status(session: ReplSession) -> ActionResult:
-    banner = (
-        "Assist mode: LLM advisory only. Analyzer owns findings, severity, and proofs."
-    )
+    banner = ASSIST_BANNER
     return ActionResult(
         ok=True,
         kind="status",

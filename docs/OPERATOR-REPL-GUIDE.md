@@ -17,7 +17,8 @@ ultra-trace repl \
   --model gpt-4.1-mini
 ```
 
-Assist defaults match explore (redacted privacy, LLM on, call summaries on).
+Assist defaults match explore (**ultra**): redacted privacy, LLM on, call
+summaries on, `rulePacks: [core, advanced]`.
 Without a key:
 
 ```bash

@@ -15,6 +15,7 @@ bootstrap, perf budgets, SARIF export, and operator security hygiene.
 2. Bootstrap helper: `./scripts/bootstrap_macos_ci.sh`
 3. Day-to-day: `ultra-trace explore --config examples/ultra-trace-assist.yml --repo-root fixtures/swift/vertical --output-dir /tmp/ut-check` (needs API key in appdir `.env`, or `--no-llm`)
 4. Nightly gate: `ultra-trace analyze --config examples/ultra-trace.yml --repo-root fixtures/swift/vertical --output-dir /tmp/ut-check`
+   (optional full gate: `examples/ultra-trace-ci-full.yml`)
 5. Optional Python: add `--target-language python --repo-root fixtures/python/vertical`
 
 ## Install
@@ -59,8 +60,13 @@ Put API keys only in `.env` (`ULTRA_TRACE_LLM_API_KEY`). Never put secrets in YA
 Override the app directory with `ULTRA_TRACE_APP_DIR` in tests or CI.
 
 Project overrides: copy [`examples/ultra-trace.yml`](examples/ultra-trace.yml) to
-the repo root as `ultra-trace.yml`, or pass `--config`. Assist profile:
-[`examples/ultra-trace-assist.yml`](examples/ultra-trace-assist.yml).
+the repo root as `ultra-trace.yml`, or pass `--config`. Named profiles:
+
+| Profile | File | Use |
+|---|---|---|
+| `assist` | [`examples/ultra-trace-assist.yml`](examples/ultra-trace-assist.yml) | Day-to-day explore / repl / serve (ultra) |
+| `ci` | [`examples/ultra-trace.yml`](examples/ultra-trace.yml) | Default nightly gate (Core, offline) |
+| `ci-full` | [`examples/ultra-trace-ci-full.yml`](examples/ultra-trace-ci-full.yml) | Gate with advanced rule packs |
 
 ## Explore (day-to-day assist)
 
@@ -70,10 +76,13 @@ Interactive loop: [`docs/OPERATOR-REPL-GUIDE.md`](docs/OPERATOR-REPL-GUIDE.md)
 Local browser UI: [`docs/OPERATOR-SERVE-GUIDE.md`](docs/OPERATOR-SERVE-GUIDE.md)
 (`ultra-trace serve`; needs `pip install -e ".[serve]"`).
 
-Human-first tracing. Built-in assist defaults: `privacyMode: redacted`, LLM on
-(planning, advisory wording, candidates), call summaries on (`maxDepth: 1`).
+Human-first **ultra** assist. Built-in explore defaults: `privacyMode: redacted`,
+LLM on (planning, advisory wording, candidates), call summaries on
+(`maxDepth: 1`), and `rulePacks: [core, advanced]` (concurrency witnesses,
+overflow, deep taint, …). SIL `analysisModes: advanced` stays opt-in.
 Same analysis engine as `analyze`. Soft exit: `0` unless you pass
 `--fail-on-findings` (and never for `llm.proposed_candidate` alone).
+Concurrency findings are pattern witnesses, not race-freedom.
 
 ```bash
 ultra-trace explore \
@@ -94,7 +103,9 @@ the analyzer owns findings, severity, and proofs.
 Operator runbook: [`docs/OPERATOR-CI-GUIDE.md`](docs/OPERATOR-CI-GUIDE.md).
 
 Core only, `privacyMode: offline`, LLM off. No network, no key. Defaults are
-unchanged from prior releases.
+unchanged from prior releases. For a gate that includes advanced rule packs
+(concurrency witnesses, overflow, …), use
+[`examples/ultra-trace-ci-full.yml`](examples/ultra-trace-ci-full.yml).
 
 ```bash
 ultra-trace analyze \
@@ -104,6 +115,17 @@ ultra-trace analyze \
   --privacy-mode offline \
   --no-llm \
   --analysis-mode core
+```
+
+Full gate (advanced packs, still offline / LLM off):
+
+```bash
+ultra-trace analyze \
+  --config examples/ultra-trace-ci-full.yml \
+  --repo-root /path/to/swift/repo \
+  --output-dir /tmp/ultra-trace \
+  --privacy-mode offline \
+  --no-llm
 ```
 
 Python target (no Swift helper):

@@ -37,12 +37,17 @@ URL: http://127.0.0.1:8765/
 Use `--port` to pick another free port. Use `--no-open` to skip the browser.
 Use `--no-llm` for local browsing without a key.
 
+Serve uses the same **ultra assist** profile as explore: Core + advanced rule
+packs, call summaries, redacted privacy, LLM on (unless `--no-llm`).
+
 Do not expose this server to the network. It binds `127.0.0.1` only.
 
 ## UI
 
-- Finding list (F1, F2, …)
-- Detail: path summary, proof tier, recommended fix
+- Finding list (F1, F2, …) with `rule_id` and `bug_type`
+- Detail: path summary, proof tier / kind, recommended fix
+- Concurrency findings show an honest witness note (pattern witness, not
+  race-freedom)
 - Location deep-link opens the file in VS Code (`vscode://file…`, local only)
 - Why / Ask: advisory replies (analyzer still owns severity)
 - Export / Reload / Summary / Candidates / Trace

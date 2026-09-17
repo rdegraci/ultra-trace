@@ -20,7 +20,9 @@ from ultra_trace.reporting.writers import write_reports
 
 ASK_TURN_LIMIT = 20
 ASSIST_BANNER = (
-    "Assist mode: LLM advisory only. Analyzer owns findings, severity, and proofs."
+    "Assist mode (ultra): Core + advanced packs. "
+    "LLM advisory only. Analyzer owns findings, severity, and proofs. "
+    "Concurrency findings are pattern witnesses, not race-freedom."
 )
 
 

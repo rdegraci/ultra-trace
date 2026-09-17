@@ -5,6 +5,14 @@ Use `ultra-trace explore` for human assist. See [OPERATOR-EXPLORE-GUIDE.md](OPER
 
 One-line rule: **explore to understand paths with LLM help; analyze to gate the build.**
 
+## Profiles
+
+| Profile | Config | When |
+|---|---|---|
+| `assist` | [`examples/ultra-trace-assist.yml`](../examples/ultra-trace-assist.yml) | explore / repl / serve (ultra; Core + advanced packs + LLM) |
+| `ci` | [`examples/ultra-trace.yml`](../examples/ultra-trace.yml) | Default nightly gate (Core, offline, LLM off) |
+| `ci-full` | [`examples/ultra-trace-ci-full.yml`](../examples/ultra-trace-ci-full.yml) | Gate with advanced rule packs when the team opts in |
+
 ## Design for CI
 
 Keep analyze boring and offline:
@@ -21,9 +29,12 @@ Concurrency findings (`bug_type: concurrency`, advanced pack) include NS3 isolat
 *signals* and the NS4 sibling-Task dual-timeline *witness*
 (`swift.sibling_task_unprotected_shared_race`). None of these claim global race
 freedom. Assist must not rebrand them as proven races beyond the stated pattern.
-Enable with `rulePacks: [core, advanced]`.
+Enable in CI with [`examples/ultra-trace-ci-full.yml`](../examples/ultra-trace-ci-full.yml)
+(`rulePacks: [core, advanced]`). Explore / serve already include advanced packs
+via the ultra assist profile.
 
-Sample config: [`examples/ultra-trace.yml`](../examples/ultra-trace.yml).
+Sample configs: [`ci`](../examples/ultra-trace.yml),
+[`ci-full`](../examples/ultra-trace-ci-full.yml).
 
 ## Prerequisites (Swift)
 
@@ -199,6 +210,7 @@ it must not replace analyze exit codes as the build gate.
 
 Adjust `--repo-root` to the Swift (or Python) tree you want scanned.
 Copy `examples/ultra-trace.yml` into the product repo if you prefer a local config.
+Use `examples/ultra-trace-ci-full.yml` when the gate should include advanced packs.
 
 ## Operator checklist
 
@@ -210,10 +222,13 @@ Copy `examples/ultra-trace.yml` into the product repo if you prefer a local conf
 6. Do not auto-execute generated proof scaffolds.
 7. Do not enable explore or LLM assist inside the gate job.
 8. Optional: upload SARIF with `github/codeql-action/upload-sarif` for PR file annotations.
+9. Optional: switch the gate to `ci-full` when advanced findings should fail the build.
 
 ## Related
 
 - Day-to-day assist: [OPERATOR-EXPLORE-GUIDE.md](OPERATOR-EXPLORE-GUIDE.md)
-- Sample CI config: [`examples/ultra-trace.yml`](../examples/ultra-trace.yml)
+- Profiles: [`ci`](../examples/ultra-trace.yml),
+  [`ci-full`](../examples/ultra-trace-ci-full.yml),
+  [`assist`](../examples/ultra-trace-assist.yml)
 - Code Scanning recipe: [`examples/github-code-scanning.yml`](../examples/github-code-scanning.yml)
 - Install and bootstrap: [README.md](../README.md)

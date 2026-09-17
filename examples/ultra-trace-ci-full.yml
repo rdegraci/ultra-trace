@@ -1,0 +1,61 @@
+# Profile: ci-full (optional CI / nightly gate with advanced rule packs).
+# Use with: ultra-trace analyze --config examples/ultra-trace-ci-full.yml
+#
+# Same boring gate posture as examples/ultra-trace.yml (offline, LLM off),
+# plus Core + advanced rule packs (concurrency witnesses, overflow, IUO,
+# deep taint, …). Still not a claim of global race freedom.
+#
+# SIL analysisModes advanced stays commented: enable when the fleet has
+# swiftc and you accept --fail-on-advanced-unavailable for missing SIL.
+# Prefer examples/ultra-trace.yml for the default nightly gate.
+# Do not auto-execute generated XCTest proof scaffolds from *-proofs/.
+
+analysisModes:
+  - core
+  # - advanced  # SIL explorer when toolchain is ready
+
+rulePacks:
+  - core
+  - advanced
+
+targetLanguage: swift
+
+privacyMode: offline
+
+llm:
+  enabled: false
+
+severityThreshold: medium
+proofMode: mixed
+maxDepth: 12
+
+outputFormats:
+  - markdown
+  - json
+  # - sarif
+
+includePaths: []
+excludePaths:
+  - .git
+  - DerivedData
+  - .build
+  - Pods
+  - Carthage
+  - SourcePackages
+
+focusModules: []
+
+swiftFrontend:
+  helperPath: null
+  parserVersion: null
+  toolchainPath: null
+  supportedSubsetMode: core
+  helperTimeoutSeconds: 120
+
+advanced:
+  enabled: false
+  # silToolchainPath: /path/to/Xcode.app/Contents/Developer/Toolchains/...
+
+callSummary:
+  enabled: false
+  maxDepth: 0

@@ -63,6 +63,7 @@
         "</span></div>" +
         "<div class=\"small\">" +
         f.rule_id +
+        (f.bug_type ? " · " + f.bug_type : "") +
         (f.candidate ? " · candidate" : "") +
         "</div>" +
         '<div class="small text-truncate">' +
@@ -80,6 +81,9 @@
   }
 
   function renderDetail(f) {
+    var note = f.witness_note
+      ? "<div class=\"mt-2 small text-secondary\">" + f.witness_note + "</div>"
+      : "";
     el("detailPane").innerHTML =
       "<div><strong>" +
       f.alias +
@@ -87,10 +91,12 @@
       f.severity +
       " · " +
       f.rule_id +
+      (f.bug_type ? " · " + f.bug_type : "") +
       "</div>" +
       "<div class=\"mt-2\">" +
       f.title +
       "</div>" +
+      note +
       "<div class=\"small text-secondary mt-2\">" +
       (f.ide_uri
         ? "<a href=\"" +

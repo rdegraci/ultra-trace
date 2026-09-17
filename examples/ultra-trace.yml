@@ -1,7 +1,10 @@
-# Sample project / nightly CI config (Core defaults).
-# Copy to the repo root as ultra-trace.yml or pass --config.
+# Profile: ci (default nightly / product-repo gate).
+# Copy to the repo root as ultra-trace.yml or pass `--config`.
 #
-# Defaults: Core only, privacyMode offline, LLM off.
+# Boring gate: Core only, privacyMode offline, LLM off.
+# Assist (ultra): examples/ultra-trace-assist.yml + explore/repl/serve.
+# Full gate (advanced rule packs): examples/ultra-trace-ci-full.yml.
+#
 # Do not set --fail-on-partial-analysis in nightly CI (unsupported Swift
 # should surface in the report, not fail the job).
 # Do not auto-execute generated XCTest proof scaffolds from *-proofs/.
@@ -20,7 +23,8 @@ analysisModes:
   - core
   # Add `advanced` to run the SIL explorer (swiftc -emit-sil) with Core fallback.
 
-# Phase 4: add `advanced` for overflow / IUO misuse / deep taint / div-by-zero.
+# Keep Core-only for the default gate. Use ultra-trace-ci-full.yml for
+# concurrency / overflow / deep-taint packs in CI.
 rulePacks:
   - core
 
@@ -39,6 +43,7 @@ maxDepth: 12
 outputFormats:
   - markdown
   - json
+  # Optional PR adjacency: add sarif (see examples/github-code-scanning.yml).
   # - sarif
 
 includePaths: []

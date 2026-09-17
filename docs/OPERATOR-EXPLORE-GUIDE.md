@@ -8,18 +8,22 @@ One-line rule: **explore to understand paths with LLM help; analyze to gate the 
 ## What explore does
 
 `explore` runs the same discovery → frontend → CFG → rules pipeline as `analyze`.
-It applies assist defaults before CLI overrides:
+It applies **ultra assist** defaults before CLI overrides:
 
 | Setting | Explore default |
 |---|---|
 | Privacy | `redacted` (keeps `full-assist` if you already set it) |
 | LLM | On (planning, advisory wording, candidates) |
 | Call summaries | On, `maxDepth: 1` |
+| Rule packs | `core` + `advanced` (concurrency witnesses, overflow, …) |
+| SIL analysis mode | Off (opt-in with `--analysis-mode advanced`) |
 | Exit on findings | Soft: exit `0` unless `--fail-on-findings` |
 | Report basename | `ultra-trace-explore-report` |
 
 The analyzer still owns findings, severity, and proofs. LLM text is advisory only.
 `llm.proposed_candidate` items never fail the severity gate.
+Concurrency findings (`bug_type: concurrency`) are **pattern witnesses**, not a
+claim of race-freedom for the module or repo.
 
 ## Prerequisites
 
@@ -49,7 +53,8 @@ ultra-trace explore \
 ```
 
 Built-in explore defaults match the intent of
-[`examples/ultra-trace-assist.yml`](../examples/ultra-trace-assist.yml).
+[`examples/ultra-trace-assist.yml`](../examples/ultra-trace-assist.yml)
+(ultra assist: Core + advanced packs).
 You can omit `--config` and still get assist profile behavior.
 
 ### Without an API key
@@ -156,5 +161,7 @@ ultra-trace explore --repo-root . --output-dir /tmp/ut --fail-on-findings
 
 - Local browser UI: [OPERATOR-SERVE-GUIDE.md](OPERATOR-SERVE-GUIDE.md)
 - CI gate: [OPERATOR-CI-GUIDE.md](OPERATOR-CI-GUIDE.md)
-- Sample assist config: [`examples/ultra-trace-assist.yml`](../examples/ultra-trace-assist.yml)
+- Profiles: [`assist`](../examples/ultra-trace-assist.yml),
+  [`ci`](../examples/ultra-trace.yml),
+  [`ci-full`](../examples/ultra-trace-ci-full.yml)
 - Install and bootstrap: [README.md](../README.md)

@@ -51,10 +51,16 @@ def test_apply_explore_profile_assist_defaults() -> None:
     assert cfg.llm.enabled is True
     assert cfg.call_summary.enabled is True
     assert cfg.call_summary.max_depth >= 1
+    assert cfg.rule_packs == ("core", "advanced")
     assert "candidate_proposals" in cfg.llm.allowed_features
     assert "exploration_planning" in cfg.llm.allowed_features
     kept = apply_explore_profile(UltraTraceConfig(privacy_mode="full-assist"))
     assert kept.privacy_mode == "full-assist"
+    # Explore stays ultra even when the base config was Core-only.
+    core_only = apply_explore_profile(UltraTraceConfig(rule_packs=("core",)))
+    assert core_only.rule_packs == ("core", "advanced")
+    # Does not enable SIL analysis mode by default.
+    assert cfg.analysis_modes == ("core",)
 
 
 def test_empty_taint_lists_disable_starter_catalog(

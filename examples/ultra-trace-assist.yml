@@ -1,8 +1,10 @@
-# Assist / explore profile (human-first LLM-assisted tracing).
-# Use with: ultra-trace explore --config examples/ultra-trace-assist.yml
-# Or rely on `explore` built-in assist defaults (same intent).
+# Profile: assist (day-to-day explore / repl / serve).
+# Use with: ultra-trace explore|repl|serve --config examples/ultra-trace-assist.yml
+# Or omit --config: built-in explore defaults match this intent (ultra assist).
 #
-# CI gates should keep using examples/ultra-trace.yml + `analyze`.
+# Ultra assist: Core + advanced rule packs, call summaries, LLM advisory.
+# Does not enable SIL analysisModes advanced (opt-in separately).
+# CI gates: examples/ultra-trace.yml (ci) or examples/ultra-trace-ci-full.yml.
 # LLM-proposed candidates never fail Core severity gates.
 # Do not auto-execute generated XCTest/pytest proof scaffolds.
 
@@ -11,6 +13,7 @@ analysisModes:
 
 rulePacks:
   - core
+  - advanced
 
 targetLanguage: swift
 
