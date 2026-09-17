@@ -138,7 +138,7 @@ Writes under `--output-dir` (basename `--output-basename`, default
 |---|---|
 | `*.md` | Executive summary, findings, eligibility / unsupported counts |
 | `*.json` | Schema 1.0 payload for CI |
-| `*.sarif.json` | Optional SARIF 2.1.0 (`--format sarif`) |
+| `*.sarif.json` | SARIF 2.1.0 for IDE / GitHub Code Scanning (`--format sarif`) |
 | `*-proofs/*.md` | Supported proof artifacts for High findings (XCTest/pytest scaffolds when justified; otherwise repro/path witness) |
 
 Authoritative fields are analyzer-owned. Any LLM prose is advisory only and never
@@ -175,6 +175,11 @@ ultra-trace report --input /tmp/ultra-trace/ultra-trace-report.json \
   --format sarif --output /tmp/ultra-trace/report.sarif.json
 ultra-trace list-rules
 ```
+
+SARIF is the NS5 PR/IDE door: primary `file:line`, `path_summary`, and dual-timeline
+`codeFlows` when present. Upload to GitHub Code Scanning with
+[`examples/github-code-scanning.yml`](examples/github-code-scanning.yml).
+LSP remains deferred.
 
 ## Secrets & privacy
 

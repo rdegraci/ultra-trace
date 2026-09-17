@@ -1,0 +1,44 @@
+# Optional product-repo recipe: upload ultra-trace SARIF to GitHub Code Scanning.
+# Keep analyze offline / LLM-off. This job is additive to the Core exit gate.
+#
+# Required repo setting: Security → Code scanning → enable (advanced / SARIF upload).
+# Permissions: security-events: write
+
+name: ultra-trace-code-scanning
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  sarif:
+    runs-on: macos-15
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ./scripts/bootstrap_macos_ci.sh
+      - name: Analyze with SARIF
+        run: |
+          ultra-trace analyze \
+            --config examples/ultra-trace.yml \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --output-dir "$RUNNER_TEMP/ultra-trace" \
+            --format json,markdown,sarif \
+            --privacy-mode offline \
+            --no-llm \
+            --analysis-mode core \
+            --severity-threshold medium
+        continue-on-error: true
+      - name: Upload SARIF to Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ runner.temp }}/ultra-trace/ultra-trace-report.sarif.json
+        if: always()

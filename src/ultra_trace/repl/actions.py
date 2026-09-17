@@ -9,6 +9,7 @@ from typing import Any
 from ultra_trace.llm.advisory import request_report_summary
 from ultra_trace.llm.candidates import is_llm_proposed
 from ultra_trace.llm.errors import LLMRequestError
+from ultra_trace.frontend.models import SourceSpan
 from ultra_trace.repl.llm_turns import ask_about_finding, ask_freeform_grounded
 from ultra_trace.repl.session import ASK_TURN_LIMIT, ReplSession
 
@@ -20,6 +21,19 @@ class ActionResult:
     message: str
     data: dict[str, Any]
     quit: bool = False
+
+
+def ide_uri_for(repo_root: Path, location: SourceSpan) -> str:
+    """Local IDE deep-link (VS Code). Paths stay on the operator machine."""
+    path = Path(location.file_path)
+    if not path.is_absolute():
+        path = (repo_root / path).resolve()
+    else:
+        path = path.resolve()
+    return (
+        f"vscode://file{path}:"
+        f"{max(1, location.start_line)}:{max(1, location.start_column)}"
+    )
 
 
 def _llm_off() -> ActionResult:
@@ -44,6 +58,8 @@ def list_findings(session: ReplSession) -> ActionResult:
                 "symbol_name": finding.symbol_name,
                 "file": finding.location.file_path,
                 "line": finding.location.start_line,
+                "column": finding.location.start_column,
+                "ide_uri": ide_uri_for(session.repo_root, finding.location),
                 "candidate": is_llm_proposed(finding),
             }
         )
@@ -104,6 +120,8 @@ def show_finding(session: ReplSession, token: str) -> ActionResult:
         "symbol_name": finding.symbol_name,
         "file": finding.location.file_path,
         "line": finding.location.start_line,
+        "column": finding.location.start_column,
+        "ide_uri": ide_uri_for(session.repo_root, finding.location),
         "title": finding.title,
         "description": finding.description,
         "path_summary": finding.path_summary,
@@ -120,6 +138,7 @@ def show_finding(session: ReplSession, token: str) -> ActionResult:
             f"confidence={finding.confidence}",
             f"symbol={finding.symbol_name or '-'}  "
             f"location={finding.location.file_path}:{finding.location.start_line}",
+            f"ide_uri={data['ide_uri']}",
             f"title={finding.title}",
             f"description={finding.description}",
             f"path_summary={finding.path_summary}",

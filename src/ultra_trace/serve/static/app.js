@@ -92,9 +92,15 @@
       f.title +
       "</div>" +
       "<div class=\"small text-secondary mt-2\">" +
-      f.file +
-      ":" +
-      f.line +
+      (f.ide_uri
+        ? "<a href=\"" +
+          f.ide_uri +
+          "\">" +
+          f.file +
+          ":" +
+          f.line +
+          "</a>"
+        : f.file + ":" + f.line) +
       " · " +
       (f.symbol_name || "-") +
       "</div>" +

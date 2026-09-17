@@ -99,7 +99,7 @@ Writes under `--output-dir` (default basename `ultra-trace-report`):
 |---|---|
 | `ultra-trace-report.md` | Yes — human triage |
 | `ultra-trace-report.json` | Yes — machine triage / dashboards |
-| `ultra-trace-report.sarif.json` | Optional — add `--format sarif` or `sarif` in config |
+| `ultra-trace-report.sarif.json` | Yes for PR adjacency — `--format …,sarif` + Code Scanning upload |
 | `ultra-trace-report-proofs/*.md` | Optional — review only; do not auto-execute |
 
 Re-render from JSON:
@@ -163,6 +163,7 @@ jobs:
             --config examples/ultra-trace.yml \
             --repo-root "$GITHUB_WORKSPACE" \
             --output-dir "$RUNNER_TEMP/ultra-trace" \
+            --format json,markdown,sarif \
             --privacy-mode offline \
             --no-llm \
             --analysis-mode core \
@@ -174,6 +175,28 @@ jobs:
           path: ${{ runner.temp }}/ultra-trace/
 ```
 
+### PR annotations via GitHub Code Scanning (NS5)
+
+SARIF carries primary `file:line`, followable `path_summary`, and dual-timeline
+`codeFlows` when present. Upload that file so PR review shows analyzer locations:
+
+```yaml
+permissions:
+  security-events: write
+  contents: read
+
+# after analyze with --format …,sarif
+- uses: github/codeql-action/upload-sarif@v3
+  if: always()
+  with:
+    sarif_file: ${{ runner.temp }}/ultra-trace/ultra-trace-report.sarif.json
+```
+
+Full copy-paste workflow: [`examples/github-code-scanning.yml`](../examples/github-code-scanning.yml).
+
+Keep the Core gate job offline and LLM-off. Code Scanning is an adjacency layer;
+it must not replace analyze exit codes as the build gate.
+
 Adjust `--repo-root` to the Swift (or Python) tree you want scanned.
 Copy `examples/ultra-trace.yml` into the product repo if you prefer a local config.
 
@@ -183,12 +206,14 @@ Copy `examples/ultra-trace.yml` into the product repo if you prefer a local conf
 2. Keep `privacyMode: offline` and LLM off.
 3. Fail the job on exit `1` when findings meet threshold.
 4. Do not default `--fail-on-partial-analysis` on nightly.
-5. Upload markdown/JSON (and optional SARIF) as artifacts.
+5. Upload markdown/JSON (and SARIF for Code Scanning) as artifacts.
 6. Do not auto-execute generated proof scaffolds.
 7. Do not enable explore or LLM assist inside the gate job.
+8. Optional: upload SARIF with `github/codeql-action/upload-sarif` for PR file annotations.
 
 ## Related
 
 - Day-to-day assist: [OPERATOR-EXPLORE-GUIDE.md](OPERATOR-EXPLORE-GUIDE.md)
 - Sample CI config: [`examples/ultra-trace.yml`](../examples/ultra-trace.yml)
+- Code Scanning recipe: [`examples/github-code-scanning.yml`](../examples/github-code-scanning.yml)
 - Install and bootstrap: [README.md](../README.md)

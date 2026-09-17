@@ -43,6 +43,7 @@ Do not expose this server to the network. It binds `127.0.0.1` only.
 
 - Finding list (F1, F2, …)
 - Detail: path summary, proof tier, recommended fix
+- Location deep-link opens the file in VS Code (`vscode://file…`, local only)
 - Why / Ask: advisory replies (analyzer still owns severity)
 - Export / Reload / Summary / Candidates / Trace
 
