@@ -35,6 +35,48 @@
         background: rgba(255, 255, 255, 0.72);
         border: 1px solid var(--ut-line);
       }
+      /* Desktop: row height comes from Detail+Ask; Findings fills and scrolls. */
+      @media (min-width: 992px) {
+        .ut-workspace {
+          display: grid;
+          grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+          gap: 1.5rem;
+          align-items: stretch;
+        }
+        .ut-workspace > [class*="col-"] {
+          width: auto;
+          max-width: none;
+          flex: none;
+          padding-left: 0;
+          padding-right: 0;
+        }
+        .ut-findings-col {
+          /* Do not let Findings content grow the row; match right column height. */
+          height: 0;
+          min-height: 100%;
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
+        }
+        .ut-findings-panel {
+          flex: 1 1 auto;
+          min-height: 0;
+          overflow: hidden;
+        }
+        .ut-findings-scroll {
+          flex: 1 1 auto;
+          min-height: 0;
+          overflow-y: auto;
+          overscroll-behavior: contain;
+        }
+      }
+      @media (max-width: 991.98px) {
+        .ut-findings-scroll {
+          max-height: 40vh;
+          overflow-y: auto;
+          overscroll-behavior: contain;
+        }
+      }
       #advisoryOut {
         white-space: pre-wrap;
       }
@@ -54,15 +96,18 @@
         </div>
       </header>
 
-      <div class="row g-4">
-        <div class="col-lg-5">
-          <div class="ut-panel rounded p-3 h-100">
-            <h2 class="h5">Findings</h2>
-            <div id="findingsList" class="list-group list-group-flush"></div>
+      <div class="row g-4 ut-workspace">
+        <div class="col-lg-5 ut-findings-col">
+          <div class="ut-panel ut-findings-panel rounded p-3 w-100 d-flex flex-column">
+            <h2 class="h5 flex-shrink-0">Findings</h2>
+            <div
+              id="findingsList"
+              class="list-group list-group-flush ut-findings-scroll"
+            ></div>
           </div>
         </div>
-        <div class="col-lg-7">
-          <div class="ut-panel rounded p-3 mb-3">
+        <div class="col-lg-7 ut-detail-col d-flex flex-column gap-3">
+          <div class="ut-panel rounded p-3">
             <h2 class="h5">Detail</h2>
             <div id="detailPane" class="text-secondary">Select a finding.</div>
             <div class="mt-3">
