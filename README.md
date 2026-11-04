@@ -212,24 +212,6 @@ LSP remains deferred.
 - Do not commit `*-proofs/`, plan JSON with client code, or `.env` files.
 - Review generated proof scaffolds before running them locally.
 
-## CI
-
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) is the template:
-
-- Ubuntu: `ruff check`, `ruff format --check`, `mypy`, `pytest` (helper tests skip).
-- **macOS 15 + Xcode** for helper bootstrap, pin validation (`--fail-on-drift`),
-  SIL probe, full pytest, e2e analyze, and perf budget reporting.
-
-Nightly defaults match [`examples/ultra-trace.yml`](examples/ultra-trace.yml):
-Core, offline, LLM off.
-
-```bash
-ruff check src tests scripts
-ruff format --check src tests scripts
-mypy
-pytest -q
-```
-
 ## Known limitations
 
 - Core defaults stay intra-procedural; enable `callSummary` for bounded summaries
